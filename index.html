@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SYP Converter</title>
+<meta name="description" content="USD to new and old Syrian pound (official and street rates) and Egyptian pound.">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SYP">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#f4f6f5; --card:#ffffff; --text:#14201d; --muted:#5f6f6a; --line:#e2e8e6;
+  --accent:#0f766e; --accent-soft:#e6f4f2; --warn:#b45309; --err:#b91c1c;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0c1211; --card:#151d1b; --text:#e8efed; --muted:#93a39e; --line:#24302d;
+    --accent:#2dd4bf; --accent-soft:#12302c; --warn:#f59e0b; --err:#f87171;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  -webkit-text-size-adjust:100%}
+main{max-width:520px;margin:0 auto;
+  padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 24px)}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+h1{font-size:20px;margin:0;letter-spacing:-.01em}
+button{font:inherit;border:0;background:var(--accent-soft);color:var(--accent);
+  padding:8px 14px;border-radius:999px;font-weight:600}
+button:active{opacity:.7}
+.input{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;
+  display:flex;align-items:center;gap:8px}
+.input span{font-size:28px;font-weight:700;color:var(--muted)}
+.input input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);
+  font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
+.chips{display:flex;gap:8px;margin:10px 0 16px;flex-wrap:wrap}
+.chips button{padding:6px 12px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;
+  display:flex;justify-content:space-between;gap:8px}
+.card h2 em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0}
+.row + .row{border-top:1px solid var(--line)}
+.row .label{color:var(--muted);font-size:14px}
+.row .val{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;word-break:break-all}
+.row .val small{font-size:14px;font-weight:600;color:var(--muted)}
+.meta{font-size:12px;color:var(--muted);margin-top:6px}
+.meta.warn{color:var(--warn)} .meta.err{color:var(--err)}
+.street{border-color:var(--accent)}
+footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>USD → SYP / EGP</h1>
+    <button id="refresh" type="button">Refresh</button>
+  </header>
+
+  <label class="input" for="usd">
+    <span>$</span>
+    <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="Amount in US dollars">
+  </label>
+  <div class="chips">
+    <button type="button" data-v="1">$1</button>
+    <button type="button" data-v="10">$10</button>
+    <button type="button" data-v="50">$50</button>
+    <button type="button" data-v="100">$100</button>
+  </div>
+
+  <section class="card street">
+    <h2>Street / shops rate <em id="streetRate">…</em></h2>
+    <div class="row"><span class="label">New SYP</span><span class="val" id="streetNew">…</span></div>
+    <div class="row"><span class="label">Old SYP</span><span class="val" id="streetOld">…</span></div>
+    <div class="meta" id="streetMeta">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2>Central bank rate <em id="offRate">…</em></h2>
+    <div class="row"><span class="label">New SYP</span><span class="val" id="offNew">…</span></div>
+    <div class="row"><span class="label">Old SYP</span><span class="val" id="offOld">…</span></div>
+    <div class="meta" id="offMeta">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2>Egyptian pound <em id="egpRate">…</em></h2>
+    <div class="row"><span class="label">EGP</span><span class="val" id="egp">…</span></div>
+    <div class="meta" id="egpMeta">Loading…</div>
+  </section>
+
+  <footer id="foot">Old SYP = New SYP × 100</footer>
+</main>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var rates = { street:null, official:null, egp:null };
+  var CACHE_KEY = "syp-rates-v1";
+
+  function store(get, val){
+    try { return get ? JSON.parse(localStorage.getItem(CACHE_KEY) || "null") : localStorage.setItem(CACHE_KEY, JSON.stringify(val)); }
+    catch(e){ return null; }
+  }
+
+  function fmt(n, d){
+    if (n == null || !isFinite(n)) return "–";
+    return n.toLocaleString("en-US", { maximumFractionDigits: d == null ? 2 : d, minimumFractionDigits: 0 });
+  }
+  function ago(iso){
+    if (!iso) return "";
+    var t = new Date(iso), s = (Date.now() - t) / 1000;
+    var rel = s < 90 ? "just now" : s < 3600 ? Math.round(s/60) + " min ago" : s < 86400 ? Math.round(s/3600) + " h ago" : Math.round(s/86400) + " days ago";
+    return t.toLocaleString([], { dateStyle:"medium", timeStyle:"short" }) + " (" + rel + ")";
+  }
+  function amount(){
+    var v = parseFloat(String($("usd").value).replace(/,/g, "."));
+    return isFinite(v) ? v : 0;
+  }
+
+  function render(){
+    var a = amount();
+    var s = rates.street, o = rates.official, e = rates.egp;
+    var sr = s ? s.sell : null;
+    $("streetRate").textContent = s ? "$1 = " + fmt(s.buy) + (s.sell && s.sell !== s.buy ? " – " + fmt(s.sell) : "") : "unavailable";
+    $("streetNew").innerHTML = s ? fmt(a * s.buy) + (s.sell !== s.buy ? " <small>– " + fmt(a * s.sell) + "</small>" : "") : "–";
+    $("streetOld").innerHTML = s ? fmt(a * s.buy * 100, 0) + (s.sell !== s.buy ? " <small>– " + fmt(a * s.sell * 100, 0) + "</small>" : "") : "–";
+    $("offRate").textContent = o ? "$1 = " + fmt(o.mid) : "unavailable";
+    $("offNew").textContent = o ? fmt(a * o.mid) : "–";
+    $("offOld").textContent = o ? fmt(a * o.mid * 100, 0) : "–";
+    $("egpRate").textContent = e ? "$1 = " + fmt(e.rate) : "unavailable";
+    $("egp").textContent = e ? fmt(a * e.rate) : "–";
+  }
+
+  function meta(id, r, label, status){
+    var el = $(id);
+    el.className = "meta" + (status ? " " + status : "");
+    el.textContent = r ? label + " · " + (r.source || "") + " · " + ago(r.updated) : label;
+  }
+
+  function withTimeout(p, ms){
+    return Promise.race([p, new Promise(function(_, rej){ setTimeout(function(){ rej(new Error("timeout")); }, ms); })]);
+  }
+  function getJSON(url){ return fetch(url, { cache:"no-store" }).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); }); }
+  function getText(url){ return fetch(url, { cache:"no-store" }).then(function(r){ if(!r.ok) throw new Error(r.status); return r.text(); }); }
+
+  function toNewSyp(n){
+    if (!isFinite(n) || n <= 0) return null;
+    if (n > 1000) n = n / 100;
+    return n > 30 && n < 1000 ? Math.round(n * 100) / 100 : null;
+  }
+
+  // Same parser as scripts/update-rates.mjs
+  function parseStreet(html){
+    var text = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+    function grab(labels){
+      for (var i = 0; i < labels.length; i++){
+        var m = text.match(new RegExp(labels[i] + "[^0-9]{0,40}([0-9][0-9,]*\\.?[0-9]*)", "i"));
+        if (m){ var v = toNewSyp(parseFloat(m[1].replace(/,/g, ""))); if (v) return v; }
+      }
+      return null;
+    }
+    var buy = grab(["Buy", "شراء"]), sell = grab(["Sell", "مبيع", "بيع"]);
+    return (buy || sell) ? { buy: buy || sell, sell: sell || buy } : null;
+  }
+
+  // rates.json is refreshed every 30 min by a GitHub Action. Read it from raw GitHub (fresher than Pages cache).
+  function ratesJsonUrl(){
+    var h = location.hostname.match(/^([^.]+)\.github\.io$/);
+    var repo = location.pathname.split("/").filter(Boolean)[0];
+    if (h && repo) return "https://raw.githubusercontent.com/" + h[1] + "/" + repo + "/main/rates.json?t=" + Date.now();
+    return "rates.json?t=" + Date.now();
+  }
+
+  var SP = "https://sp-today.com/en/currency/us_dollar";
+  var PROXIES = [
+    function(u){ return "https://api.allorigins.win/raw?url=" + encodeURIComponent(u); },
+    function(u){ return "https://corsproxy.io/?url=" + encodeURIComponent(u); }
+  ];
+
+  function liveStreet(){
+    var i = 0;
+    function next(){
+      if (i >= PROXIES.length) return Promise.reject(new Error("no proxy worked"));
+      var url = PROXIES[i++](SP);
+      return withTimeout(getText(url), 8000).then(function(html){
+        var s = parseStreet(html);
+        if (!s) throw new Error("parse");
+        return s;
+      }).catch(next);
+    }
+    return next();
+  }
+
+  var loading = false;
+  function load(){
+    if (loading) return; loading = true;
+    $("refresh").textContent = "…";
+    var now = new Date().toISOString();
+
+    var backup = withTimeout(getJSON(ratesJsonUrl()), 8000).catch(function(){ return null; });
+
+    var pOfficial = withTimeout(getJSON("https://open.er-api.com/v6/latest/USD"), 8000).then(function(j){
+      var upd = new Date(j.time_last_update_unix * 1000).toISOString();
+      var off = toNewSyp(j.rates.SYP);
+      if (off) { rates.official = { mid: off, source: "open.er-api.com", updated: upd }; meta("offMeta", rates.official, "Live"); }
+      if (j.rates.EGP) { rates.egp = { rate: j.rates.EGP, source: "open.er-api.com", updated: upd }; meta("egpMeta", rates.egp, "Live"); }
+      if (!off) throw new Error("no SYP");
+    }).catch(function(){
+      return backup.then(function(b){
+        if (b && b.official){ rates.official = b.official; meta("offMeta", b.official, "Backup", "warn"); }
+        else if (rates.official) meta("offMeta", rates.official, "Offline, last saved", "err");
+        else meta("offMeta", null, "Could not load rate", "err");
+        if (b && b.egp){ rates.egp = b.egp; meta("egpMeta", b.egp, "Backup", "warn"); }
+        else if (rates.egp) meta("egpMeta", rates.egp, "Offline, last saved", "err");
+        else meta("egpMeta", null, "Could not load rate", "err");
+      });
+    });
+
+    var pStreet = liveStreet().then(function(s){
+      rates.street = { buy: s.buy, sell: s.sell, source: "sp-today.com", updated: now };
+      meta("streetMeta", rates.street, "Live (buy – sell)");
+    }).catch(function(){
+      return backup.then(function(b){
+        if (b && b.street){ rates.street = b.street; meta("streetMeta", b.street, "Auto-updated every 30 min (buy – sell)"); }
+        else if (rates.street) meta("streetMeta", rates.street, "Offline, last saved", "err");
+        else meta("streetMeta", null, "Could not load street rate", "err");
+      });
+    });
+
+    Promise.all([pOfficial, pStreet]).then(function(){
+      render(); store(false, rates);
+      $("foot").textContent = "Checked " + new Date().toLocaleTimeString([], { timeStyle:"short" }) + " · Old SYP = New SYP × 100";
+      loading = false; $("refresh").textContent = "Refresh";
+    });
+    pOfficial.then(render); pStreet.then(render);
+  }
+
+  // Show last saved rates instantly, then fetch fresh ones.
+  var cached = store(true);
+  if (cached){ rates = cached; render(); }
+
+  $("usd").addEventListener("input", render);
+  $("usd").addEventListener("focus", function(){ this.select(); });
+  document.querySelectorAll(".chips button").forEach(function(b){
+    b.addEventListener("click", function(){ $("usd").value = b.dataset.v; render(); });
+  });
+  $("refresh").addEventListener("click", load);
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) load(); });
+  load();
+})();
+</script>
+</body>
+</html>

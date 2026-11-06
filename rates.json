@@ -1,0 +1,19 @@
+{
+  "street": {
+    "buy": 143.5,
+    "sell": 144.25,
+    "source": "sp-today.com",
+    "updated": "2026-11-06T23:55:00Z"
+  },
+  "official": {
+    "mid": 121.89,
+    "source": "open.er-api.com",
+    "updated": "2026-11-06T00:02:31Z"
+  },
+  "egp": {
+    "rate": 53.9,
+    "source": "open.er-api.com",
+    "updated": "2026-11-06T00:02:31Z"
+  },
+  "checked": "2026-11-06T23:54:56.114Z"
+}
