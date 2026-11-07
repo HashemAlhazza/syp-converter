@@ -8,14 +8,14 @@
   "official": {
     "mid": 121.89,
     "source": "open.er-api.com",
-    "updated": "2026-11-06T00:02:31Z"
+    "updated": "2026-11-06T00:02:31.000Z"
   },
   "egp": {
-    "rate": 53.9,
+    "rate": 53.900714,
     "source": "open.er-api.com",
-    "updated": "2026-11-06T00:02:31Z"
+    "updated": "2026-11-06T00:02:31.000Z"
   },
-  "checked": "2026-11-06T23:54:56.114Z",
+  "checked": "2026-11-07T00:12:20.768Z",
   "history": [
     {
       "t": "2026-11-06T23:55:00Z",
