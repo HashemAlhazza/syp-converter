@@ -69,6 +69,12 @@ button:active{opacity:.7}
 .meta{font-size:12px;line-height:1.6;color:var(--muted);margin-top:4px}
 .meta.warn{color:var(--warn)} .meta.err{color:var(--err)}
 .street{border-color:var(--accent)}
+.calls{font-weight:700;color:var(--accent)}
+.calls.none{color:var(--warn)}
+.keyrow{display:flex;gap:8px}
+.keyrow input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--text);background:var(--bg);
+  border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:0}
+.keyrow input:focus{border-color:var(--accent)}
 footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
 .offline{display:none;background:var(--warn);color:#fff;font-size:13px;font-weight:600;text-align:center;
   border-radius:12px;padding:8px 12px;margin-bottom:16px}
@@ -101,13 +107,23 @@ body.is-offline .offline{display:block}
   <div class="input out"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg>EGP</span><output id="egp">–</output></div>
 
   <section class="card">
-    <h2>Rates for $1</h2>
+    <h2>Rates for $1 <em class="calls" id="calls"></em></h2>
     <div class="row"><span class="label">Street (buy – sell)</span><span class="val" id="streetRate">…</span></div>
     <div class="meta" id="streetMeta">Loading…</div>
     <div class="row"><span class="label">Central bank</span><span class="val" id="offRate">…</span></div>
     <div class="meta" id="offMeta">Loading…</div>
     <div class="row"><span class="label">Egyptian pound</span><span class="val" id="egpRate">…</span></div>
     <div class="meta" id="egpMeta">Loading…</div>
+  </section>
+
+  <section class="card">
+    <h2>sp-today API key</h2>
+    <div class="keyrow">
+      <input id="keyInput" type="password" autocomplete="off" placeholder="Paste your key" aria-label="sp-today API key">
+      <button id="keySave" type="button">Save</button>
+    </div>
+    <div class="meta" id="keyStatus"></div>
+    <div class="meta">Stored only on this device, never uploaded. Free plan: 100 calls/month, so the street rate updates up to 3 times a day: once when you first open the app, then each time you tap Refresh. The counter resets at midnight.</div>
   </section>
 
   <footer id="foot">Old SYP = New SYP × 100</footer>
@@ -189,8 +205,23 @@ body.is-offline .offline{display:block}
     return "rates.json?t=" + Date.now();
   }
 
+  var KEY_KEY = "syp-sptoday-key", CALLS_KEY = "syp-calls-v1", DAILY = 3;
+  function getKey(){ try { return localStorage.getItem(KEY_KEY) || ""; } catch(e){ return ""; } }
+  function today(){ var d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+  function usedToday(){
+    try { var c = JSON.parse(localStorage.getItem(CALLS_KEY) || "null"); return c && c.day === today() ? c.used : 0; }
+    catch(e){ return 0; }
+  }
+  function useCall(){ try { localStorage.setItem(CALLS_KEY, JSON.stringify({ day: today(), used: usedToday() + 1 })); } catch(e){} showCalls(); }
+  function showCalls(){
+    var left = Math.max(0, DAILY - usedToday());
+    $("calls").textContent = left + " of " + DAILY + " left today";
+    $("calls").className = "calls" + (left ? "" : " none");
+  }
+
   var loading = false;
-  function load(){
+  function load(force){
+    force = force === true;
     if (loading) return; loading = true;
     $("refresh").textContent = "…";
     var now = new Date().toISOString();
@@ -214,11 +245,34 @@ body.is-offline .offline{display:block}
       });
     });
 
-    var pStreet = backup.then(function(b){
-      if (b && b.street){ rates.street = b.street; meta("streetMeta", b.street, "Damascus (buy – sell), updated 3× a day"); }
-      else if (rates.street) meta("streetMeta", rates.street, "Offline, last saved", "err");
-      else meta("streetMeta", null, "Could not load street rate", "err");
-    });
+    // Street rate: sp-today API, called straight from this device with the key saved on it.
+    // Free plan = 100 calls/month, so allow 3 a day: the first open of the day, then Refresh taps.
+    var key = getKey(), left = DAILY - usedToday();
+    var auto = !(rates.street && rates.street.via === "api" && rates.street.day === today());
+    var pStreet;
+    if (key && left > 0 && (force || auto)) {
+      useCall();
+      pStreet = withTimeout(getJSON("https://api-v2.sp-today.com/api/v1/currency/usd?lang=en&city=damascus&api_key=" + encodeURIComponent(key)), 10000)
+        .then(function(j){
+          var d = j && j.ok && j.data && j.data.currency && j.data.currency.cities && j.data.currency.cities.damascus;
+          var buy = d && toNewSyp(Number(d.buy)), sell = d && toNewSyp(Number(d.sell));
+          if (!buy && !sell) throw new Error((j && j.error && j.error.message) || "no rate in reply");
+          rates.street = { buy: buy || sell, sell: sell || buy, source: "sp-today.com", updated: j.data.currency.updated_at || now, via: "api", day: today() };
+          meta("streetMeta", rates.street, "Live, Damascus (buy – sell)");
+        })
+        .catch(function(e){
+          if (rates.street) meta("streetMeta", rates.street, "Couldn't reach sp-today (" + e.message + "), showing last saved", "err");
+          else meta("streetMeta", null, "Couldn't reach sp-today: " + e.message, "err");
+        });
+    } else if (key) {
+      meta("streetMeta", rates.street, left > 0 ? "Saved, Damascus (buy – sell) · tap Refresh for newest" : "Saved · no street updates left today", left > 0 ? "" : "warn");
+      pStreet = Promise.resolve();
+    } else {
+      pStreet = backup.then(function(b){
+        if (!rates.street && b && b.street) rates.street = b.street;
+        meta("streetMeta", rates.street, "Add your sp-today key below to get live rates", "warn");
+      });
+    }
 
     Promise.all([pOfficial, pStreet]).then(function(){
       document.body.classList.toggle("is-offline", !navigator.onLine);
@@ -234,7 +288,7 @@ body.is-offline .offline{display:block}
   if (cached){ rates = cached; render(); }
   try { localStorage.removeItem("syp-hist-v1"); } catch(e){}
   function onlineState(){ document.body.classList.toggle("is-offline", !navigator.onLine); }
-  window.addEventListener("online", function(){ onlineState(); load(); });
+  window.addEventListener("online", function(){ onlineState(); load(false); });
   window.addEventListener("offline", onlineState);
   onlineState();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
@@ -248,7 +302,18 @@ body.is-offline .offline{display:block}
   function setMode(m){ mode = m; try { localStorage.setItem("syp-mode", m); } catch(e){} render(); }
   $("mStreet").addEventListener("click", function(){ setMode("street"); });
   $("mOff").addEventListener("click", function(){ setMode("official"); });
-  $("refresh").addEventListener("click", load);
+  $("refresh").addEventListener("click", function(){ load(true); });
+  $("keySave").addEventListener("click", function(){
+    var v = $("keyInput").value.trim();
+    try { v ? localStorage.setItem(KEY_KEY, v) : localStorage.removeItem(KEY_KEY); } catch(e){}
+    $("keyInput").value = ""; keyState(); load(true);
+  });
+  function keyState(){
+    var k = getKey();
+    $("keyStatus").textContent = k ? "Key saved on this device (…" + k.slice(-4) + ")." : "No key saved yet.";
+    $("keySave").textContent = k ? "Replace" : "Save";
+  }
+  keyState(); showCalls();
   function isDark(){
     var t = document.documentElement.getAttribute("data-theme");
     return t ? t === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -265,8 +330,8 @@ body.is-offline .offline{display:block}
     themeIcon();
   });
   themeIcon();
-  document.addEventListener("visibilitychange", function(){ if (!document.hidden) load(); });
-  load();
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) load(false); });
+  load(false);
 })();
 </script>
 </body>

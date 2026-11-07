@@ -2,7 +2,7 @@ name: Update rates
 
 on:
   schedule:
-    - cron: "15 */8 * * *" # 3x/day: sp-today free plan allows 100 requests/month
+    - cron: "30 1 * * *" # daily: open.er-api updates once a day
   workflow_dispatch:
 
 permissions:
@@ -17,8 +17,6 @@ jobs:
         with:
           node-version: 22
       - run: node scripts/update-rates.mjs
-        env:
-          SPTODAY_API_KEY: ${{ secrets.SPTODAY_API_KEY }}
       - name: Commit if changed
         run: |
           git config user.name "rates-bot"
