@@ -435,7 +435,7 @@ body.is-offline .offline{display:block}
     var el = $(id);
     el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); });
     el.addEventListener("focus", function(){ el.select(); });
-    el.addEventListener("blur", function(){ if (srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); });
+    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); });
   });
   function setMode(m){ mode = m; try { localStorage.setItem("syp-mode", m); } catch(e){} render(); }
   $("mStreet").addEventListener("click", function(){ setMode("street"); });
