@@ -417,9 +417,23 @@ body.is-offline .offline{display:block}
   onlineState();
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
 
+  // Add thousands commas while typing, keeping the cursor in the right place.
+  function liveCommas(el){
+    var v = el.value, pos = el.selectionStart == null ? v.length : el.selectionStart;
+    var before = v.slice(0, pos).replace(/[^0-9.]/g, "").length;
+    var clean = v.replace(/[^0-9.]/g, ""), dot = clean.indexOf(".");
+    if (dot >= 0) clean = clean.slice(0, dot + 1) + clean.slice(dot + 1).replace(/\./g, "");
+    var parts = clean.split("."), int = parts[0].replace(/^0+(?=\d)/, "");
+    var out = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (parts.length > 1 ? "." + parts[1] : "");
+    if (out === v) return;
+    el.value = out;
+    var i = 0, n = 0;
+    while (i < out.length && n < before){ if (out[i] !== ",") n++; i++; }
+    try { el.setSelectionRange(i, i); } catch(e){}
+  }
   ["usd", "nsyp", "osyp"].forEach(function(id){
     var el = $(id);
-    el.addEventListener("input", function(){ src = id; srcVal = num(el.value); render(); });
+    el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); });
     el.addEventListener("focus", function(){ el.select(); });
     el.addEventListener("blur", function(){ if (srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); });
   });
