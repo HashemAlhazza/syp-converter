@@ -26,18 +26,18 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);
-  font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
   -webkit-text-size-adjust:100%}
 main{max-width:520px;margin:0 auto;
-  padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 24px)}
-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  padding:calc(env(safe-area-inset-top) + 20px) 16px calc(env(safe-area-inset-bottom) + 32px)}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
 h1{font-size:20px;margin:0;letter-spacing:-.01em}
 button{font:inherit;border:0;background:var(--accent-soft);color:var(--accent);
   padding:8px 14px;border-radius:999px;font-weight:600}
 button:active{opacity:.7}
-.input{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;
+.input{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 18px;
   display:flex;align-items:center;gap:8px}
-.input{margin-bottom:10px}
+.input{margin-bottom:14px}
 .input:focus-within{border-color:var(--accent)}
 .input .cur{width:84px;flex:none;font-size:15px;font-weight:700;color:var(--muted)}
 .input input,.input output{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);
@@ -46,22 +46,32 @@ button:active{opacity:.7}
 .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
 .seg button{flex:1;background:transparent;color:var(--muted)}
 .seg button.on{background:var(--accent);color:#fff}
-.using{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 12px}
-.card{margin-top:16px}
+.using{font-size:13px;color:var(--muted);text-align:center;margin:12px 0 20px}
+.card{margin-top:24px}
 .row .val{font-size:18px;white-space:nowrap}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:12px}
-.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 18px;margin-bottom:16px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 14px;
   display:flex;justify-content:space-between;gap:8px}
 .card h2 em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
-.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:6px 0}
-.row + .row{border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:12px 0 4px}
+.meta + .row{border-top:1px solid var(--line);margin-top:14px;padding-top:16px}
 .row .label{color:var(--muted);font-size:14px}
 .row .val{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;word-break:break-all}
 .row .val small{font-size:14px;font-weight:600;color:var(--muted)}
-.meta{font-size:12px;color:var(--muted);margin-top:6px}
+.meta{font-size:12px;line-height:1.6;color:var(--muted);margin-top:4px}
 .meta.warn{color:var(--warn)} .meta.err{color:var(--err)}
 .street{border-color:var(--accent)}
-footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
+footer{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
+.trend svg{display:block;width:100%;height:96px;margin:4px 0 10px}
+.trend .line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.trend .area{fill:var(--accent-soft);stroke:none}
+.trend .dot{fill:var(--accent)}
+.trend .axis{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.trend .chg{font-size:15px;font-weight:700}
+.up{color:var(--err)} .down{color:#16a34a}
+.offline{display:none;background:var(--warn);color:#fff;font-size:13px;font-weight:600;text-align:center;
+  border-radius:12px;padding:8px 12px;margin-bottom:16px}
+body.is-offline .offline{display:block}
 </style>
 </head>
 <body>
@@ -71,6 +81,7 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
     <button id="refresh" type="button">Refresh</button>
   </header>
 
+  <div class="offline">Offline. Showing last saved rates.</div>
   <div class="seg" role="tablist">
     <button type="button" id="mStreet" class="on">Street rate</button>
     <button type="button" id="mOff">Central bank</button>
@@ -93,6 +104,12 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
     <div class="meta" id="offMeta">Loading…</div>
     <div class="row"><span class="label">Egyptian pound</span><span class="val" id="egpRate">…</span></div>
     <div class="meta" id="egpMeta">Loading…</div>
+  </section>
+
+  <section class="card trend">
+    <h2>Street rate, last 7 days <em class="chg" id="trendChg"></em></h2>
+    <div id="trendChart"></div>
+    <div class="axis"><span id="trendFrom"></span><span id="trendRange"></span><span>now</span></div>
   </section>
 
   <footer id="foot">Old SYP = New SYP × 100</footer>
@@ -245,7 +262,12 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
       });
     });
 
-    Promise.all([pOfficial, pStreet]).then(function(){
+    Promise.all([pOfficial, pStreet, backup]).then(function(res){
+      var b = res[2];
+      var add = (b && b.history) || [];
+      if (rates.street) add = add.concat([{ t: rates.street.updated, buy: rates.street.buy, sell: rates.street.sell }]);
+      drawTrend(mergeHist(add));
+      document.body.classList.toggle("is-offline", !navigator.onLine);
       render(); store(false, rates);
       $("foot").textContent = "Checked " + new Date().toLocaleTimeString([], { timeStyle:"short" }) + " · Old SYP = New SYP × 100";
       loading = false; $("refresh").textContent = "Refresh";
@@ -253,9 +275,64 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
     pOfficial.then(render); pStreet.then(render);
   }
 
+  // ---- 7-day street trend ----
+  var HIST_KEY = "syp-hist-v1", WEEK = 7 * 864e5;
+  function loadHist(){ try { return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); } catch(e){ return []; } }
+  function mergeHist(list){
+    var byHour = {};
+    loadHist().concat(list || []).forEach(function(p){
+      if (!p || !p.t || !isFinite(p.buy)) return;
+      var k = Math.floor(new Date(p.t) / 36e5);
+      if (!byHour[k] || new Date(p.t) > new Date(byHour[k].t)) byHour[k] = p;
+    });
+    var cutoff = Date.now() - WEEK - 864e5;
+    var out = Object.keys(byHour).map(function(k){ return byHour[k]; })
+      .filter(function(p){ return new Date(p.t) > cutoff; })
+      .sort(function(a, b){ return new Date(a.t) - new Date(b.t); });
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(out)); } catch(e){}
+    return out;
+  }
+  function drawTrend(hist){
+    var pts = hist.filter(function(p){ return new Date(p.t) > Date.now() - WEEK; });
+    var box = $("trendChart");
+    if (pts.length < 2){
+      box.innerHTML = '<div class="meta">Not enough data yet. The chart fills in as rates are saved over the next days.</div>';
+      $("trendChg").textContent = ""; $("trendFrom").textContent = ""; $("trendRange").textContent = "";
+      return;
+    }
+    var W = 320, H = 96, pad = 6;
+    var t0 = new Date(pts[0].t).getTime(), t1 = Date.now();
+    var vals = pts.map(function(p){ return p.buy; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (hi - lo < 0.5){ lo -= 0.5; hi += 0.5; }
+    var xy = pts.map(function(p){
+      var x = pad + (new Date(p.t) - t0) / Math.max(1, t1 - t0) * (W - 2 * pad);
+      var y = pad + (hi - p.buy) / (hi - lo) * (H - 2 * pad);
+      return [x.toFixed(1), y.toFixed(1)];
+    });
+    var line = xy.map(function(q, i){ return (i ? "L" : "M") + q[0] + " " + q[1]; }).join(" ");
+    var last = xy[xy.length - 1];
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-label="Street rate trend">' +
+      '<path class="area" d="' + line + ' L' + last[0] + ' ' + H + ' L' + xy[0][0] + ' ' + H + ' Z"/>' +
+      '<path class="line" d="' + line + '" vector-effect="non-scaling-stroke"/>' +
+      '<circle class="dot" cx="' + last[0] + '" cy="' + last[1] + '" r="3.5"/></svg>';
+    var first = pts[0].buy, now = pts[pts.length - 1].buy, diff = now - first;
+    var el = $("trendChg");
+    el.className = "chg " + (diff > 0.001 ? "up" : diff < -0.001 ? "down" : "");
+    el.textContent = (diff > 0 ? "▲ +" : diff < 0 ? "▼ " : "") + fmt(diff) + " (" + fmt(diff / first * 100, 1) + "%)";
+    $("trendFrom").textContent = new Date(t0).toLocaleDateString([], { month:"short", day:"numeric" });
+    $("trendRange").textContent = "low " + fmt(Math.min.apply(null, vals)) + " · high " + fmt(Math.max.apply(null, vals));
+  }
+
   // Show last saved rates instantly, then fetch fresh ones.
   var cached = store(true);
   if (cached){ rates = cached; render(); }
+  drawTrend(mergeHist([]));
+  function onlineState(){ document.body.classList.toggle("is-offline", !navigator.onLine); }
+  window.addEventListener("online", function(){ onlineState(); load(); });
+  window.addEventListener("offline", onlineState);
+  onlineState();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function(){});
 
   ["usd", "nsyp", "osyp"].forEach(function(id){
     var el = $(id);

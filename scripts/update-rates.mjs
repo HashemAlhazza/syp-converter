@@ -59,6 +59,16 @@ try {
   if (j.rates.EGP) out.egp = { rate: j.rates.EGP, source: "open.er-api.com", updated: new Date(j.time_last_update_unix * 1000).toISOString() };
 } catch (e) { console.log(e.message); }
 
+// Keep one street-rate point per hour for the last 8 days (used by the trend chart).
+if (out.street && out.street.updated === now) {
+  const hist = (prev.history || []).filter((p) => Date.now() - new Date(p.t) < 8 * 864e5);
+  const hour = Math.floor(Date.now() / 36e5);
+  const last = hist[hist.length - 1];
+  const point = { t: now, buy: out.street.buy, sell: out.street.sell };
+  if (last && Math.floor(new Date(last.t) / 36e5) === hour) hist[hist.length - 1] = point; else hist.push(point);
+  out.history = hist;
+}
+
 out.checked = now;
 await writeFile("rates.json", JSON.stringify(out, null, 2) + "\n");
 console.log(JSON.stringify(out));
