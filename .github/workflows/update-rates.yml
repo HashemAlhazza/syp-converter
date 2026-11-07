@@ -2,7 +2,7 @@ name: Update rates
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "15 */8 * * *" # 3x/day: sp-today free plan allows 100 requests/month
   workflow_dispatch:
 
 permissions:
@@ -12,11 +12,13 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 22
       - run: node scripts/update-rates.mjs
+        env:
+          SPTODAY_API_KEY: ${{ secrets.SPTODAY_API_KEY }}
       - name: Commit if changed
         run: |
           git config user.name "rates-bot"

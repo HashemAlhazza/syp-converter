@@ -181,47 +181,12 @@ body.is-offline .offline{display:block}
     return n > 30 && n < 1000 ? Math.round(n * 100) / 100 : null;
   }
 
-  // Same parser as scripts/update-rates.mjs
-  function parseStreet(html){
-    var text = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
-    function grab(labels){
-      for (var i = 0; i < labels.length; i++){
-        var m = text.match(new RegExp(labels[i] + "[^0-9]{0,40}([0-9][0-9,]*\\.?[0-9]*)", "i"));
-        if (m){ var v = toNewSyp(parseFloat(m[1].replace(/,/g, ""))); if (v) return v; }
-      }
-      return null;
-    }
-    var buy = grab(["Buy", "شراء"]), sell = grab(["Sell", "مبيع", "بيع"]);
-    return (buy || sell) ? { buy: buy || sell, sell: sell || buy } : null;
-  }
-
-  // rates.json is refreshed every 30 min by a GitHub Action. Read it from raw GitHub (fresher than Pages cache).
+  // rates.json is refreshed 3x a day by a GitHub Action. Read it from raw GitHub (fresher than Pages cache).
   function ratesJsonUrl(){
     var h = location.hostname.match(/^([^.]+)\.github\.io$/);
     var repo = location.pathname.split("/").filter(Boolean)[0];
     if (h && repo) return "https://raw.githubusercontent.com/" + h[1] + "/" + repo + "/main/rates.json?t=" + Date.now();
     return "rates.json?t=" + Date.now();
-  }
-
-  var SP = "https://sp-today.com/en/currency/us_dollar";
-  var PROXIES = [
-    function(u){ return "https://api.allorigins.win/raw?url=" + encodeURIComponent(u); },
-    function(u){ return "https://corsproxy.io/?url=" + encodeURIComponent(u); }
-  ];
-
-  function liveStreet(){
-    var i = 0;
-    function next(){
-      if (i >= PROXIES.length) return Promise.reject(new Error("no proxy worked"));
-      var url = PROXIES[i++](SP);
-      return withTimeout(getText(url), 8000).then(function(html){
-        var s = parseStreet(html);
-        if (!s) throw new Error("parse");
-        return s;
-      }).catch(next);
-    }
-    return next();
   }
 
   var loading = false;
@@ -235,8 +200,8 @@ body.is-offline .offline{display:block}
     var pOfficial = withTimeout(getJSON("https://open.er-api.com/v6/latest/USD"), 8000).then(function(j){
       var upd = new Date(j.time_last_update_unix * 1000).toISOString();
       var off = toNewSyp(j.rates.SYP);
-      if (off) { rates.official = { mid: off, source: "open.er-api.com", updated: upd }; meta("offMeta", rates.official, "Live"); }
-      if (j.rates.EGP) { rates.egp = { rate: j.rates.EGP, source: "open.er-api.com", updated: upd }; meta("egpMeta", rates.egp, "Live"); }
+      if (off) { rates.official = { mid: off, source: "open.er-api.com", updated: upd }; meta("offMeta", rates.official, "Live, source updates daily"); }
+      if (j.rates.EGP) { rates.egp = { rate: j.rates.EGP, source: "open.er-api.com", updated: upd }; meta("egpMeta", rates.egp, "Live, source updates daily"); }
       if (!off) throw new Error("no SYP");
     }).catch(function(){
       return backup.then(function(b){
@@ -249,15 +214,10 @@ body.is-offline .offline{display:block}
       });
     });
 
-    var pStreet = liveStreet().then(function(s){
-      rates.street = { buy: s.buy, sell: s.sell, source: "sp-today.com", updated: now };
-      meta("streetMeta", rates.street, "Live (buy – sell)");
-    }).catch(function(){
-      return backup.then(function(b){
-        if (b && b.street){ rates.street = b.street; meta("streetMeta", b.street, "Auto-updated every 30 min (buy – sell)"); }
-        else if (rates.street) meta("streetMeta", rates.street, "Offline, last saved", "err");
-        else meta("streetMeta", null, "Could not load street rate", "err");
-      });
+    var pStreet = backup.then(function(b){
+      if (b && b.street){ rates.street = b.street; meta("streetMeta", b.street, "Damascus (buy – sell), updated 3× a day"); }
+      else if (rates.street) meta("streetMeta", rates.street, "Offline, last saved", "err");
+      else meta("streetMeta", null, "Could not load street rate", "err");
     });
 
     Promise.all([pOfficial, pStreet]).then(function(){
