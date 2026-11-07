@@ -46,9 +46,10 @@ button:active{opacity:.7}
   display:flex;align-items:center;gap:8px}
 .input{margin-bottom:14px}
 .input:focus-within{border-color:var(--accent)}
-.input .cur{width:84px;flex:none;font-size:15px;font-weight:700;color:var(--muted)}
+.input .cur{width:116px;flex:none;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--muted)}
 .input input,.input output{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);
   font:inherit;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.flag{font-size:24px;line-height:1}
 .input.out{background:var(--accent-soft);border-color:transparent}
 .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
 .seg button{flex:1;background:transparent;color:var(--muted)}
@@ -91,13 +92,13 @@ body.is-offline .offline{display:block}
   </div>
   <div class="using" id="using">…</div>
 
-  <label class="input"><span class="cur">USD</span>
+  <label class="input"><span class="cur"><span class="flag">🇺🇸</span>USD</span>
     <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="US dollars"></label>
-  <label class="input"><span class="cur">New SYP</span>
+  <label class="input"><span class="cur"><span class="flag">🇸🇾</span>New SYP</span>
     <input id="nsyp" type="text" inputmode="decimal" autocomplete="off" aria-label="New Syrian pounds"></label>
-  <label class="input"><span class="cur">Old SYP</span>
+  <label class="input"><span class="cur"><span class="flag">🇸🇾</span>Old SYP</span>
     <input id="osyp" type="text" inputmode="decimal" autocomplete="off" aria-label="Old Syrian pounds"></label>
-  <div class="input out"><span class="cur">EGP</span><output id="egp">–</output></div>
+  <div class="input out"><span class="cur"><span class="flag">🇪🇬</span>EGP</span><output id="egp">–</output></div>
 
   <section class="card">
     <h2>Rates for $1</h2>
