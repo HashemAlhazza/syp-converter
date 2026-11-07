@@ -118,11 +118,12 @@ body.is-offline .offline{display:block}
 
   <section class="card">
     <h2>sp-today API key</h2>
-    <div class="keyrow">
+    <div class="keyrow" id="keyrow">
       <input id="keyInput" type="password" autocomplete="off" placeholder="Paste your key" aria-label="sp-today API key">
       <button id="keySave" type="button">Save</button>
     </div>
     <div class="meta" id="keyStatus"></div>
+    <button type="button" id="keyChange" style="margin-top:10px">Change key</button>
     <div class="meta">Stored only on this device, never uploaded. Free plan: 100 calls/month, so the street rate updates up to 3 times a day: once when you first open the app, then each time you tap Refresh. The counter resets at midnight.</div>
   </section>
 
@@ -310,9 +311,12 @@ body.is-offline .offline{display:block}
   });
   function keyState(){
     var k = getKey();
-    $("keyStatus").textContent = k ? "Key saved on this device (…" + k.slice(-4) + ")." : "No key saved yet.";
-    $("keySave").textContent = k ? "Replace" : "Save";
+    $("keyStatus").textContent = k ? "✓ Key saved on this device (…" + k.slice(-4) + "). No need to enter it again." : "No key saved yet.";
+    $("keySave").textContent = "Save";
+    $("keyrow").style.display = k ? "none" : "";
+    $("keyChange").style.display = k ? "" : "none";
   }
+  $("keyChange").addEventListener("click", function(){ $("keyrow").style.display = ""; $("keyChange").style.display = "none"; $("keyInput").focus(); });
   keyState(); showCalls();
   function isDark(){
     var t = document.documentElement.getAttribute("data-theme");
