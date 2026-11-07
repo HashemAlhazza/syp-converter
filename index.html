@@ -37,11 +37,18 @@ button{font:inherit;border:0;background:var(--accent-soft);color:var(--accent);
 button:active{opacity:.7}
 .input{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;
   display:flex;align-items:center;gap:8px}
-.input span{font-size:28px;font-weight:700;color:var(--muted)}
-.input input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);
-  font-size:34px;font-weight:700;font-variant-numeric:tabular-nums}
-.chips{display:flex;gap:8px;margin:10px 0 16px;flex-wrap:wrap}
-.chips button{padding:6px 12px;font-size:14px}
+.input{margin-bottom:10px}
+.input:focus-within{border-color:var(--accent)}
+.input .cur{width:84px;flex:none;font-size:15px;font-weight:700;color:var(--muted)}
+.input input,.input output{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);
+  font:inherit;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.input.out{background:var(--accent-soft);border-color:transparent}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
+.seg button{flex:1;background:transparent;color:var(--muted)}
+.seg button.on{background:var(--accent);color:#fff}
+.using{font-size:13px;color:var(--muted);text-align:center;margin:8px 0 12px}
+.card{margin-top:16px}
+.row .val{font-size:18px;white-space:nowrap}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;margin-bottom:12px}
 .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;
   display:flex;justify-content:space-between;gap:8px}
@@ -60,38 +67,31 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
 <body>
 <main>
   <header>
-    <h1>USD → SYP / EGP</h1>
+    <h1>SYP Converter</h1>
     <button id="refresh" type="button">Refresh</button>
   </header>
 
-  <label class="input" for="usd">
-    <span>$</span>
-    <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="Amount in US dollars">
-  </label>
-  <div class="chips">
-    <button type="button" data-v="1">$1</button>
-    <button type="button" data-v="10">$10</button>
-    <button type="button" data-v="50">$50</button>
-    <button type="button" data-v="100">$100</button>
+  <div class="seg" role="tablist">
+    <button type="button" id="mStreet" class="on">Street rate</button>
+    <button type="button" id="mOff">Central bank</button>
   </div>
+  <div class="using" id="using">…</div>
 
-  <section class="card street">
-    <h2>Street / shops rate <em id="streetRate">…</em></h2>
-    <div class="row"><span class="label">New SYP</span><span class="val" id="streetNew">…</span></div>
-    <div class="row"><span class="label">Old SYP</span><span class="val" id="streetOld">…</span></div>
+  <label class="input"><span class="cur">USD</span>
+    <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="US dollars"></label>
+  <label class="input"><span class="cur">New SYP</span>
+    <input id="nsyp" type="text" inputmode="decimal" autocomplete="off" aria-label="New Syrian pounds"></label>
+  <label class="input"><span class="cur">Old SYP</span>
+    <input id="osyp" type="text" inputmode="decimal" autocomplete="off" aria-label="Old Syrian pounds"></label>
+  <div class="input out"><span class="cur">EGP</span><output id="egp">–</output></div>
+
+  <section class="card">
+    <h2>Rates for $1</h2>
+    <div class="row"><span class="label">Street (buy – sell)</span><span class="val" id="streetRate">…</span></div>
     <div class="meta" id="streetMeta">Loading…</div>
-  </section>
-
-  <section class="card">
-    <h2>Central bank rate <em id="offRate">…</em></h2>
-    <div class="row"><span class="label">New SYP</span><span class="val" id="offNew">…</span></div>
-    <div class="row"><span class="label">Old SYP</span><span class="val" id="offOld">…</span></div>
+    <div class="row"><span class="label">Central bank</span><span class="val" id="offRate">…</span></div>
     <div class="meta" id="offMeta">Loading…</div>
-  </section>
-
-  <section class="card">
-    <h2>Egyptian pound <em id="egpRate">…</em></h2>
-    <div class="row"><span class="label">EGP</span><span class="val" id="egp">…</span></div>
+    <div class="row"><span class="label">Egyptian pound</span><span class="val" id="egpRate">…</span></div>
     <div class="meta" id="egpMeta">Loading…</div>
   </section>
 
@@ -119,23 +119,33 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
     var rel = s < 90 ? "just now" : s < 3600 ? Math.round(s/60) + " min ago" : s < 86400 ? Math.round(s/3600) + " h ago" : Math.round(s/86400) + " days ago";
     return t.toLocaleString([], { dateStyle:"medium", timeStyle:"short" }) + " (" + rel + ")";
   }
-  function amount(){
-    var v = parseFloat(String($("usd").value).replace(/,/g, "."));
-    return isFinite(v) ? v : 0;
+  var mode = "street", src = "usd", srcVal = 1;
+  try { mode = localStorage.getItem("syp-mode") || "street"; } catch(e){}
+  function num(v){ var n = parseFloat(String(v).replace(/,/g, "")); return isFinite(n) ? n : null; }
+  function rate(){
+    if (mode === "street") return rates.street ? rates.street.buy : null;
+    return rates.official ? rates.official.mid : null;
   }
 
   function render(){
-    var a = amount();
-    var s = rates.street, o = rates.official, e = rates.egp;
-    var sr = s ? s.sell : null;
-    $("streetRate").textContent = s ? "$1 = " + fmt(s.buy) + (s.sell && s.sell !== s.buy ? " – " + fmt(s.sell) : "") : "unavailable";
-    $("streetNew").innerHTML = s ? fmt(a * s.buy) + (s.sell !== s.buy ? " <small>– " + fmt(a * s.sell) + "</small>" : "") : "–";
-    $("streetOld").innerHTML = s ? fmt(a * s.buy * 100, 0) + (s.sell !== s.buy ? " <small>– " + fmt(a * s.sell * 100, 0) + "</small>" : "") : "–";
-    $("offRate").textContent = o ? "$1 = " + fmt(o.mid) : "unavailable";
-    $("offNew").textContent = o ? fmt(a * o.mid) : "–";
-    $("offOld").textContent = o ? fmt(a * o.mid * 100, 0) : "–";
-    $("egpRate").textContent = e ? "$1 = " + fmt(e.rate) : "unavailable";
-    $("egp").textContent = e ? fmt(a * e.rate) : "–";
+    var s = rates.street, o = rates.official, e = rates.egp, r = rate();
+    $("mStreet").className = mode === "street" ? "on" : "";
+    $("mOff").className = mode === "street" ? "" : "on";
+    $("using").textContent = r ? "Using $1 = " + fmt(r) + " new SYP" + (mode === "street" ? " (shop buy rate)" : " (central bank)") : "Rate unavailable";
+    $("streetRate").textContent = s ? fmt(s.buy) + (s.sell && s.sell !== s.buy ? " – " + fmt(s.sell) : "") : "unavailable";
+    $("offRate").textContent = o ? fmt(o.mid) : "unavailable";
+    $("egpRate").textContent = e ? fmt(e.rate) : "unavailable";
+
+    var usd = null;
+    if (srcVal != null && r){
+      usd = src === "usd" ? srcVal : src === "nsyp" ? srcVal / r : srcVal / 100 / r;
+    }
+    var vals = { usd: usd, nsyp: usd != null ? usd * r : null, osyp: usd != null ? usd * r * 100 : null };
+    ["usd", "nsyp", "osyp"].forEach(function(id){
+      if (id === src) return;
+      $(id).value = vals[id] == null ? "" : fmt(vals[id], id === "osyp" ? 0 : 2);
+    });
+    $("egp").textContent = usd != null && e ? fmt(usd * e.rate) : "–";
   }
 
   function meta(id, r, label, status){
@@ -247,11 +257,15 @@ footer{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
   var cached = store(true);
   if (cached){ rates = cached; render(); }
 
-  $("usd").addEventListener("input", render);
-  $("usd").addEventListener("focus", function(){ this.select(); });
-  document.querySelectorAll(".chips button").forEach(function(b){
-    b.addEventListener("click", function(){ $("usd").value = b.dataset.v; render(); });
+  ["usd", "nsyp", "osyp"].forEach(function(id){
+    var el = $(id);
+    el.addEventListener("input", function(){ src = id; srcVal = num(el.value); render(); });
+    el.addEventListener("focus", function(){ el.select(); });
+    el.addEventListener("blur", function(){ if (srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); });
   });
+  function setMode(m){ mode = m; try { localStorage.setItem("syp-mode", m); } catch(e){} render(); }
+  $("mStreet").addEventListener("click", function(){ setMode("street"); });
+  $("mOff").addEventListener("click", function(){ setMode("official"); });
   $("refresh").addEventListener("click", load);
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) load(); });
   load();
