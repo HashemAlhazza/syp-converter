@@ -183,7 +183,8 @@ body.is-offline .offline{display:block}
   function meta(id, r, label, status){
     var el = $(id);
     el.className = "meta" + (status ? " " + status : "");
-    el.textContent = r ? label + " · " + (r.source || "") + " · " + ago(r.updated) : label;
+    el.textContent = r ? label + " · " + (r.source || "") + " last changed it " + ago(r.updated) +
+      (r.checkedAt ? " · you checked at " + new Date(r.checkedAt).toLocaleTimeString([], { timeStyle:"short" }) : "") : label;
   }
 
   function withTimeout(p, ms){
@@ -258,7 +259,7 @@ body.is-offline .offline{display:block}
           var d = j && j.ok && j.data && j.data.currency && j.data.currency.cities && j.data.currency.cities.damascus;
           var buy = d && toNewSyp(Number(d.buy)), sell = d && toNewSyp(Number(d.sell));
           if (!buy && !sell) throw new Error((j && j.error && j.error.message) || "no rate in reply");
-          rates.street = { buy: buy || sell, sell: sell || buy, source: "sp-today.com", updated: j.data.currency.updated_at || now, via: "api", day: today() };
+          rates.street = { buy: buy || sell, sell: sell || buy, source: "sp-today.com", updated: j.data.currency.updated_at || now, via: "api", day: today(), checkedAt: Date.now() };
           meta("streetMeta", rates.street, "Live, Damascus (buy – sell)");
         })
         .catch(function(e){
