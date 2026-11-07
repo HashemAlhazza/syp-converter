@@ -71,6 +71,21 @@ button:active{opacity:.7}
 .street{border-color:var(--accent)}
 .calls{font-weight:700;color:var(--accent)}
 .calls.none{color:var(--warn)}
+.chart h2{align-items:center}
+.chart select{font:inherit;font-size:14px;text-transform:none;letter-spacing:0;color:var(--text);background:var(--bg);
+  border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .ylab,.chart .xlab{fill:var(--muted);font-size:11px}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.chart .ar{fill:var(--accent-soft)}
+.chart .pt{fill:var(--card);stroke:var(--accent);stroke-width:2}
+.chart .pt.sel{fill:var(--accent)}
+.chart .tip{fill:var(--text);font-size:12px;font-weight:700}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.stats div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--muted)}
 .keyrow{display:flex;gap:8px}
 .keyrow input{flex:1;min-width:0;font:inherit;font-size:16px;color:var(--text);background:var(--bg);
   border:1px solid var(--line);border-radius:12px;padding:10px 12px;outline:0}
@@ -114,6 +129,15 @@ body.is-offline .offline{display:block}
     <div class="meta" id="offMeta">Loading…</div>
     <div class="row"><span class="label">Egyptian pound</span><span class="val" id="egpRate">…</span></div>
     <div class="meta" id="egpMeta">Loading…</div>
+  </section>
+
+  <section class="card chart">
+    <h2>Street rate by month
+      <select id="monthSel" aria-label="Choose month"></select>
+    </h2>
+    <div id="chartBox"></div>
+    <div class="stats" id="chartStats"></div>
+    <div class="meta" id="sptChange"></div>
   </section>
 
   <section class="card">
@@ -260,6 +284,9 @@ body.is-offline .offline{display:block}
           var buy = d && toNewSyp(Number(d.buy)), sell = d && toNewSyp(Number(d.sell));
           if (!buy && !sell) throw new Error((j && j.error && j.error.message) || "no rate in reply");
           rates.street = { buy: buy || sell, sell: sell || buy, source: "sp-today.com", updated: j.data.currency.updated_at || now, via: "api", day: today(), checkedAt: Date.now() };
+          var dd = j.data.currency.cities.damascus;
+          rates.street.chgWeek = dd.change_week; rates.street.chgMonth = dd.change_month;
+          addPoint(rates.street);
           meta("streetMeta", rates.street, "Live, Damascus (buy – sell)");
         })
         .catch(function(e){
@@ -278,17 +305,93 @@ body.is-offline .offline{display:block}
 
     Promise.all([pOfficial, pStreet]).then(function(){
       document.body.classList.toggle("is-offline", !navigator.onLine);
-      render(); store(false, rates);
+      render(); store(false, rates); showSptChange();
       $("foot").textContent = "Checked " + new Date().toLocaleTimeString([], { timeStyle:"short" }) + " · Old SYP = New SYP × 100";
       loading = false; $("refresh").textContent = "Refresh";
     });
     pOfficial.then(render); pStreet.then(render);
   }
 
+  // ---- Monthly street-rate chart (built from the rates this device has fetched) ----
+  var HKEY = "syp-street-hist-v1";
+  function hist(){ try { return JSON.parse(localStorage.getItem(HKEY) || "[]"); } catch(e){ return []; } }
+  function addPoint(r){
+    var h = hist();
+    if (!h.some(function(p){ return p.t === r.updated; })) h.push({ t: r.updated, buy: r.buy, sell: r.sell });
+    h.sort(function(a, b){ return new Date(a.t) - new Date(b.t); });
+    try { localStorage.setItem(HKEY, JSON.stringify(h.slice(-1500))); } catch(e){}
+    fillMonths(); drawChart();
+  }
+  function mkey(d){ return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); }
+  function fillMonths(){
+    var sel = $("monthSel"), cur = sel.value, keys = {};
+    keys[mkey(new Date())] = 1;
+    hist().forEach(function(p){ keys[mkey(new Date(p.t))] = 1; });
+    var list = Object.keys(keys).sort().reverse();
+    sel.innerHTML = list.map(function(k){
+      var y = +k.slice(0, 4), m = +k.slice(5) - 1;
+      return '<option value="' + k + '">' + new Date(y, m, 1).toLocaleDateString([], { month: "long", year: "numeric" }) + "</option>";
+    }).join("");
+    sel.value = list.indexOf(cur) >= 0 ? cur : list[0];
+  }
+  var selDay = null;
+  function drawChart(){
+    var k = $("monthSel").value, y = +k.slice(0, 4), m = +k.slice(5) - 1;
+    var days = new Date(y, m + 1, 0).getDate();
+    // one point per day: the last rate seen that day
+    var byDay = {};
+    hist().forEach(function(p){ var d = new Date(p.t); if (mkey(d) === k) byDay[d.getDate()] = p; });
+    var pts = Object.keys(byDay).map(Number).sort(function(a, b){ return a - b; }).map(function(d){ return { d: d, v: byDay[d].buy }; });
+    var box = $("chartBox"), stats = $("chartStats");
+    if (!pts.length){
+      box.innerHTML = '<div class="meta">No rates saved for this month yet. Each day you open the app adds a point to this graph.</div>';
+      stats.innerHTML = ""; return;
+    }
+    var W = 340, H = 190, L = 40, R = 10, T = 18, B = 24;
+    var vals = pts.map(function(p){ return p.v; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var pad = Math.max(0.5, (hi - lo) * 0.15); lo = Math.floor((lo - pad) * 2) / 2; hi = Math.ceil((hi + pad) * 2) / 2;
+    var X = function(d){ return L + (d - 1) / Math.max(1, days - 1) * (W - L - R); };
+    var Y = function(v){ return T + (hi - v) / (hi - lo) * (H - T - B); };
+    var g = "";
+    [lo, (lo + hi) / 2, hi].forEach(function(v){
+      g += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/>' +
+           '<text class="ylab" x="' + (L - 6) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + fmt(v, 1) + "</text>";
+    });
+    [1, 8, 15, 22, days].forEach(function(d){
+      g += '<text class="xlab" x="' + X(d) + '" y="' + (H - 6) + '" text-anchor="middle">' + d + "</text>";
+    });
+    var line = pts.map(function(p, i){ return (i ? "L" : "M") + X(p.d).toFixed(1) + " " + Y(p.v).toFixed(1); }).join(" ");
+    if (pts.length > 1) g += '<path class="ar" d="' + line + " L" + X(pts[pts.length - 1].d) + " " + (H - B) + " L" + X(pts[0].d) + " " + (H - B) + ' Z"/>' +
+                             '<path class="ln" d="' + line + '"/>';
+    var sel = pts.filter(function(p){ return p.d === selDay; })[0] || pts[pts.length - 1];
+    pts.forEach(function(p){
+      g += '<circle class="pt' + (p === sel ? " sel" : "") + '" data-d="' + p.d + '" cx="' + X(p.d) + '" cy="' + Y(p.v) + '" r="' + (p === sel ? 5 : 3.5) + '"/>';
+    });
+    var tx = Math.min(W - R - 45, Math.max(L + 45, X(sel.d)));
+    g += '<text class="tip" x="' + tx + '" y="' + (Y(sel.v) - 10) + '" text-anchor="middle">' + new Date(y, m, sel.d).toLocaleDateString([], { month: "short", day: "numeric" }) + ": " + fmt(sel.v) + "</text>";
+    box.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Street rate chart">' + g + "</svg>";
+    box.querySelectorAll(".pt").forEach(function(c){
+      c.addEventListener("click", function(){ selDay = +c.getAttribute("data-d"); drawChart(); });
+    });
+    var first = pts[0].v, last = pts[pts.length - 1].v, diff = last - first;
+    stats.innerHTML =
+      "<div><b>" + fmt(Math.min.apply(null, vals)) + "</b><span>Lowest</span></div>" +
+      "<div><b>" + fmt(Math.max.apply(null, vals)) + "</b><span>Highest</span></div>" +
+      "<div><b>" + (diff > 0 ? "▲ +" : diff < 0 ? "▼ " : "") + fmt(diff) + "</b><span>Change</span></div>";
+  }
+  function showSptChange(){
+    var s = rates.street, el = $("sptChange");
+    el.textContent = s && s.chgMonth != null ? "sp-today: " + (s.chgWeek >= 0 ? "+" : "") + fmt(s.chgWeek, 2) + "% this week, " + (s.chgMonth >= 0 ? "+" : "") + fmt(s.chgMonth, 2) + "% this month." : "Tap a dot to see that day's rate (shop buy price).";
+  }
+  $("monthSel").addEventListener("change", function(){ selDay = null; drawChart(); });
+
   // Show last saved rates instantly, then fetch fresh ones.
   var cached = store(true);
   if (cached){ rates = cached; render(); }
   try { localStorage.removeItem("syp-hist-v1"); } catch(e){}
+  if (rates.street && rates.street.via === "api") addPoint(rates.street); else { fillMonths(); drawChart(); }
+  showSptChange();
   function onlineState(){ document.body.classList.toggle("is-offline", !navigator.onLine); }
   window.addEventListener("online", function(){ onlineState(); load(false); });
   window.addEventListener("offline", onlineState);
