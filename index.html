@@ -86,6 +86,9 @@ button:active{opacity:.7}
 .stats div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
 .stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
 .stats span{font-size:12px;color:var(--muted)}
+.keys{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:2px 0 6px}
+.keys button{padding:10px 0;font-size:20px;border-radius:12px}
+.sum{min-height:20px;text-align:right;font-size:14px;font-weight:700;color:var(--accent);margin:0 6px 8px}
 .keyrow{display:flex;gap:8px}
 /* PC / tablet: two columns, converter left, graph + key right */
 @media (min-width: 900px){
@@ -133,6 +136,12 @@ body.is-offline .offline{display:block}
     <input id="nsyp" type="text" inputmode="decimal" autocomplete="off" aria-label="New Syrian pounds"></label>
   <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#007a3d"/><rect y="10.67" width="24" height="5.33" fill="#000"/><polygon fill="#ce1126" points="6,6.2 6.59,7.99 8.47,7.99 6.9399999999999995,9.1 7.53,10.9 6,9.79 4.47,10.9 5.0600000000000005,9.1 3.53,7.99 5.41,7.99"/><polygon fill="#ce1126" points="12,6.2 12.59,7.99 14.47,7.99 12.94,9.1 13.53,10.9 12,9.79 10.47,10.9 11.06,9.1 9.53,7.99 11.41,7.99"/><polygon fill="#ce1126" points="18,6.2 18.59,7.99 20.47,7.99 18.94,9.1 19.53,10.9 18,9.79 16.47,10.9 17.06,9.1 15.53,7.99 17.41,7.99"/></svg>Old SYP</span>
     <input id="osyp" type="text" inputmode="decimal" autocomplete="off" aria-label="Old Syrian pounds"></label>
+  <div class="keys" aria-label="Calculator keys">
+    <button type="button" data-k="+">+</button><button type="button" data-k="−">−</button>
+    <button type="button" data-k="×">×</button><button type="button" data-k="÷">÷</button>
+    <button type="button" data-k="=">=</button><button type="button" data-k="C">C</button>
+  </div>
+  <div class="sum" id="sumHint"></div>
   <div class="input out"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg>EGP</span><output id="egp">–</output></div>
 
   <section class="card">
@@ -196,7 +205,31 @@ body.is-offline .offline{display:block}
   }
   var mode = "street", src = "usd", srcVal = 1;
   try { mode = localStorage.getItem("syp-mode") || "street"; } catch(e){}
-  function num(v){ var n = parseFloat(String(v).replace(/,/g, "")); return isFinite(n) ? n : null; }
+  // Box values can be sums like "100 + 50 × 2". Safe calculator (no eval):
+  // + - × ÷ (also * / x), normal precedence, a trailing operator is ignored.
+  function num(v){
+    var t = String(v).replace(/,/g, "").replace(/[×xX*]/g, "*").replace(/[÷\/]/g, "/").replace(/[−–]/g, "-").replace(/\s+/g, "");
+    t = t.replace(/[+\-*\/]+$/, "");
+    if (!t || /[^0-9.+\-*\/]/.test(t)) return null;
+    var toks = t.match(/\d*\.?\d+|\d+\.|[+\-*\/]/g);
+    if (!toks || toks.join("") !== t) return null;
+    var i = 0;
+    function atom(){
+      var sign = 1;
+      while (toks[i] === "-" || toks[i] === "+"){ if (toks[i] === "-") sign = -sign; i++; }
+      var n = parseFloat(toks[i++]);
+      return isFinite(n) ? sign * n : NaN;
+    }
+    function term(){
+      var v = atom();
+      while (toks[i] === "*" || toks[i] === "/"){ var op = toks[i++], b = atom(); v = op === "*" ? v * b : v / b; }
+      return v;
+    }
+    var v = term();
+    while (toks[i] === "+" || toks[i] === "-"){ var op = toks[i++], b = term(); v = op === "+" ? v + b : v - b; }
+    return i === toks.length && isFinite(v) ? v : null;
+  }
+  function isExpr(v){ return /\d\s*[+\-−–×÷*\/xX]/.test(String(v).replace(/^[\s\-]+/, "")); }
   function rate(){
     if (mode === "street") return rates.street ? rates.street.buy : null;
     return rates.official ? rates.official.mid : null;
@@ -420,23 +453,60 @@ body.is-offline .offline{display:block}
   // Add thousands commas while typing, keeping the cursor in the right place.
   function liveCommas(el){
     var v = el.value, pos = el.selectionStart == null ? v.length : el.selectionStart;
-    var before = v.slice(0, pos).replace(/[^0-9.]/g, "").length;
-    var clean = v.replace(/[^0-9.]/g, ""), dot = clean.indexOf(".");
-    if (dot >= 0) clean = clean.slice(0, dot + 1) + clean.slice(dot + 1).replace(/\./g, "");
-    var parts = clean.split("."), int = parts[0].replace(/^0+(?=\d)/, "");
-    var out = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (parts.length > 1 ? "." + parts[1] : "");
+    var keep = function(x){ return x.replace(/[^0-9.+\-−×÷*\/xX]/g, ""); };
+    var before = keep(v.slice(0, pos)).length;
+    var clean = keep(v).replace(/[*xX]/g, "×").replace(/\//g, "÷").replace(/-/g, "−");
+    var out = clean.replace(/[0-9.]+/g, function(n){
+      var d = n.indexOf(".");
+      if (d >= 0) n = n.slice(0, d + 1) + n.slice(d + 1).replace(/\./g, "");
+      var parts = n.split("."), int = parts[0].replace(/^0+(?=\d)/, "");
+      return int.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (parts.length > 1 ? "." + parts[1] : "");
+    }).replace(/([+−×÷])/g, " $1 ").replace(/\s+/g, " ").replace(/^ /, "")
+      .replace(/(^|[+−×÷] )− (?=\d)/g, "$1−");
     if (out === v) return;
     el.value = out;
     var i = 0, n = 0;
-    while (i < out.length && n < before){ if (out[i] !== ",") n++; i++; }
+    while (i < out.length && n < before){ if (out[i] !== "," && out[i] !== " ") n++; i++; }
     try { el.setSelectionRange(i, i); } catch(e){}
   }
   ["usd", "nsyp", "osyp"].forEach(function(id){
     var el = $(id);
-    el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); });
-    el.addEventListener("focus", function(){ el.select(); });
-    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); });
+    el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); showSum(); });
+    el.addEventListener("focus", function(){ lastBox = id; if (!isExpr(el.value)) el.select(); showSum(); });
+    el.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === "="){ e.preventDefault(); finish(); } });
+    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); showSum(); });
   });
+  // Calculator keys under the boxes (the iPhone number pad has no + key).
+  var lastBox = "usd";
+  function showSum(){
+    var el = $(src), h = $("sumHint");
+    h.textContent = isExpr(el.value) && srcVal != null ? "= " + fmt(srcVal, src === "osyp" ? 0 : 2) : "";
+  }
+  function finish(){
+    var el = $(lastBox);
+    if (lastBox === src && srcVal != null) el.value = fmt(srcVal, src === "osyp" ? 0 : 2);
+    showSum();
+  }
+  function press(k){
+    var el = $(lastBox);
+    if (k === "=") return finish();
+    if (k === "C"){ el.value = ""; }
+    else {
+      var v = el.value, a = el.selectionStart == null ? v.length : el.selectionStart, b = el.selectionEnd == null ? v.length : el.selectionEnd;
+      if (document.activeElement !== el){ a = b = v.length; }
+      if (a === 0 && b === v.length && v && !isExpr(v)) a = b = v.length; // keep the number, don't replace it
+      el.value = v.slice(0, a) + k + v.slice(b);
+      try { el.setSelectionRange(a + 1, a + 1); } catch(e){}
+    }
+    liveCommas(el); src = lastBox; srcVal = num(el.value); render(); showSum();
+    el.focus();
+  }
+  document.querySelectorAll(".keys button").forEach(function(btn){
+    var go = function(e){ e.preventDefault(); press(btn.dataset.k); };
+    btn.addEventListener("touchstart", go, { passive: false });
+    btn.addEventListener("mousedown", go);
+  });
+
   function setMode(m){ mode = m; try { localStorage.setItem("syp-mode", m); } catch(e){} render(); }
   $("mStreet").addEventListener("click", function(){ setMode("street"); });
   $("mOff").addEventListener("click", function(){ setMode("official"); });
