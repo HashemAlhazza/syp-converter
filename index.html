@@ -574,7 +574,7 @@ body.is-offline .offline{display:block}
     var el = $(id);
     el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); showSum(); });
     el.addEventListener("focus", function(){
-      lastBox = id; showSum();
+      lastBox = id; showSum(); scrollToBox(el);
       if (isExpr(el.value)) return;
       // Select the whole number so typing replaces it. iPhone Safari ignores select() during
       // the tap, so select again right after the tap finishes.
@@ -584,6 +584,18 @@ body.is-offline .offline{display:block}
     el.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === "="){ e.preventDefault(); finish(); } });
     el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); showSum(); });
   });
+  // "Scroll into view": on phones, bring the tapped box (and the calculator keys under it)
+  // into the middle of the screen once the keyboard has opened.
+  function scrollToBox(el){
+    if (!window.matchMedia("(max-width: 899px)").matches) return;
+    var go = function(){ if (document.activeElement === el) el.closest(".input").scrollIntoView({ behavior: "smooth", block: "center" }); };
+    setTimeout(go, 350);
+    if (window.visualViewport){
+      var once = function(){ window.visualViewport.removeEventListener("resize", once); setTimeout(go, 50); };
+      window.visualViewport.addEventListener("resize", once);
+      setTimeout(function(){ window.visualViewport.removeEventListener("resize", once); }, 1500);
+    }
+  }
   // Tapping anywhere on a box (flag, name or empty space) focuses its number field.
   document.querySelectorAll("label.input").forEach(function(box){
     box.addEventListener("click", function(e){
