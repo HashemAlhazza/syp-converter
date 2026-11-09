@@ -45,7 +45,8 @@ button:active{opacity:.7}
 .input{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 18px;
   display:flex;align-items:center;gap:8px}
 .input{margin-bottom:14px}
-.input:focus-within{border-color:var(--accent)}
+.input:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+label.input{cursor:text;-webkit-tap-highlight-color:transparent}
 .input .cur{width:116px;flex:none;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:var(--muted)}
 .input input,.input output{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);
   font:inherit;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
@@ -572,9 +573,23 @@ body.is-offline .offline{display:block}
   ["usd", "nsyp", "osyp"].forEach(function(id){
     var el = $(id);
     el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); showSum(); });
-    el.addEventListener("focus", function(){ lastBox = id; if (!isExpr(el.value)) el.select(); showSum(); });
+    el.addEventListener("focus", function(){
+      lastBox = id; showSum();
+      if (isExpr(el.value)) return;
+      // Select the whole number so typing replaces it. iPhone Safari ignores select() during
+      // the tap, so select again right after the tap finishes.
+      el.select();
+      setTimeout(function(){ if (document.activeElement === el) try { el.setSelectionRange(0, el.value.length); } catch(e){} }, 60);
+    });
     el.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === "="){ e.preventDefault(); finish(); } });
     el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); showSum(); });
+  });
+  // Tapping anywhere on a box (flag, name or empty space) focuses its number field.
+  document.querySelectorAll("label.input").forEach(function(box){
+    box.addEventListener("click", function(e){
+      var inp = box.querySelector("input");
+      if (e.target !== inp && document.activeElement !== inp){ e.preventDefault(); inp.focus(); }
+    });
   });
   // Calculator keys under the boxes (the iPhone number pad has no + key).
   var lastBox = "usd";
