@@ -87,7 +87,8 @@ label.input{cursor:text;-webkit-tap-highlight-color:transparent}
 .stats div{background:var(--bg);border-radius:12px;padding:10px;text-align:center}
 .stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
 .stats span{font-size:12px;color:var(--muted)}
-.keys{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:2px 0 6px}
+.keys[hidden],.sum[hidden],.sum:empty{display:none}
+.keys{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:-4px 0 14px}
 .keys button{padding:10px 0;font-size:20px;border-radius:12px}
 .sum{min-height:20px;text-align:right;font-size:14px;font-weight:700;color:var(--accent);margin:0 6px 8px}
 .keyrow{display:flex;gap:8px}
@@ -148,12 +149,12 @@ body.is-offline .offline{display:block}
     <input id="nsyp" type="text" inputmode="decimal" autocomplete="off" data-i18n-aria="nsypAria" aria-label="New Syrian pounds"></label>
   <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#007a3d"/><rect y="10.67" width="24" height="5.33" fill="#000"/><polygon fill="#ce1126" points="6,6.2 6.59,7.99 8.47,7.99 6.9399999999999995,9.1 7.53,10.9 6,9.79 4.47,10.9 5.0600000000000005,9.1 3.53,7.99 5.41,7.99"/><polygon fill="#ce1126" points="12,6.2 12.59,7.99 14.47,7.99 12.94,9.1 13.53,10.9 12,9.79 10.47,10.9 11.06,9.1 9.53,7.99 11.41,7.99"/><polygon fill="#ce1126" points="18,6.2 18.59,7.99 20.47,7.99 18.94,9.1 19.53,10.9 18,9.79 16.47,10.9 17.06,9.1 15.53,7.99 17.41,7.99"/></svg><span data-i18n="osyp">Old SYP</span></span>
     <input id="osyp" type="text" inputmode="decimal" autocomplete="off" data-i18n-aria="osypAria" aria-label="Old Syrian pounds"></label>
-  <div class="keys" data-i18n-aria="keysAria" aria-label="Calculator keys">
+  <div class="keys" id="keys" hidden data-i18n-aria="keysAria" aria-label="Calculator keys">
     <button type="button" data-k="+">+</button><button type="button" data-k="−">−</button>
     <button type="button" data-k="×">×</button><button type="button" data-k="÷">÷</button>
     <button type="button" data-k="=">=</button><button type="button" data-k="C">C</button>
   </div>
-  <div class="sum" id="sumHint"></div>
+  <div class="sum" id="sumHint" hidden></div>
   <div class="input out"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg><span data-i18n="egp">EGP</span></span><output id="egp">–</output></div>
 
   <section class="card">
@@ -574,16 +575,27 @@ body.is-offline .offline{display:block}
     var el = $(id);
     el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); showSum(); });
     el.addEventListener("focus", function(){
-      lastBox = id; showSum(); scrollToBox(el);
+      lastBox = id; showKeys(el); showSum(); scrollToBox(el);
       if (isExpr(el.value)) return;
       // Select the whole number so typing replaces it. iPhone Safari ignores select() during
       // the tap, so select again right after the tap finishes.
       el.select();
-      setTimeout(function(){ if (document.activeElement === el) try { el.setSelectionRange(0, el.value.length); } catch(e){} }, 60);
+      var v0 = el.value; // only re-select if nothing was typed yet
+      setTimeout(function(){ if (document.activeElement === el && el.value === v0) try { el.setSelectionRange(0, el.value.length); } catch(e){} }, 60);
     });
     el.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === "="){ e.preventDefault(); finish(); } });
-    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); showSum(); });
+    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); showSum(); setTimeout(hideKeysIfIdle, 0); });
   });
+  // Calculator keys appear only under the box being edited.
+  function showKeys(el){
+    var box = el.closest(".input"), keys = $("keys"), sum = $("sumHint");
+    if (box.nextElementSibling !== keys) box.after(keys, sum);
+    keys.hidden = false; sum.hidden = false;
+  }
+  function hideKeysIfIdle(){
+    var a = document.activeElement && document.activeElement.id;
+    if (a !== "usd" && a !== "nsyp" && a !== "osyp"){ $("keys").hidden = true; $("sumHint").hidden = true; }
+  }
   // "Scroll into view": on phones, bring the tapped box (and the calculator keys under it)
   // into the middle of the screen once the keyboard has opened.
   function scrollToBox(el){

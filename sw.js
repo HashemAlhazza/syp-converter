@@ -1,5 +1,5 @@
 // Offline support: keep the app files cached so it opens without internet.
-const CACHE = "syp-app-v17";
+const CACHE = "syp-app-v18";
 const FILES = ["./", "index.html", "manifest.json", "icon-180.png", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
