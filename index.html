@@ -290,8 +290,15 @@ body.is-offline .offline{display:block}
   try { mode = localStorage.getItem("syp-mode") || "street"; } catch(e){}
   // Box values can be sums like "100 + 50 × 2". Safe calculator (no eval):
   // + - × ÷ (also * / x), normal precedence, a trailing operator is ignored.
+  // Arabic-Indic (٠-٩) and Persian (۰-۹) digits are accepted and turned into 0-9;
+  // ٫ is the Arabic decimal point and ٬ the Arabic thousands separator.
+  function westDigits(v){
+    return String(v).replace(/[\u0660-\u0669]/g, function(c){ return c.charCodeAt(0) - 0x660; })
+      .replace(/[\u06F0-\u06F9]/g, function(c){ return c.charCodeAt(0) - 0x6F0; })
+      .replace(/\u066B/g, ".").replace(/\u066C/g, ",");
+  }
   function num(v){
-    var t = String(v).replace(/,/g, "").replace(/[×xX*]/g, "*").replace(/[÷\/]/g, "/").replace(/[−–]/g, "-").replace(/\s+/g, "");
+    var t = westDigits(v).replace(/,/g, "").replace(/[×xX*]/g, "*").replace(/[÷\/]/g, "/").replace(/[−–]/g, "-").replace(/\s+/g, "");
     t = t.replace(/[+\-*\/]+$/, "");
     if (!t || /[^0-9.+\-*\/]/.test(t)) return null;
     var toks = t.match(/\d*\.?\d+|\d+\.|[+\-*\/]/g);
@@ -543,7 +550,9 @@ body.is-offline .offline{display:block}
 
   // Add thousands commas while typing, keeping the cursor in the right place.
   function liveCommas(el){
-    var v = el.value, pos = el.selectionStart == null ? v.length : el.selectionStart;
+    var raw = el.value, v = westDigits(raw);
+    if (v !== raw){ var p0 = el.selectionStart; el.value = v; try { el.setSelectionRange(p0, p0); } catch(e){} }
+    var pos = el.selectionStart == null ? v.length : el.selectionStart;
     var keep = function(x){ return x.replace(/[^0-9.+\-−×÷*\/xX]/g, ""); };
     var before = keep(v.slice(0, pos)).length;
     var clean = keep(v).replace(/[*xX]/g, "×").replace(/\//g, "÷").replace(/-/g, "−");
