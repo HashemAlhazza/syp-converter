@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
-<script>try{var t=localStorage.getItem("syp-theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}</script>
+<script>try{var t=localStorage.getItem("syp-theme");if(t)document.documentElement.setAttribute("data-theme",t);var l=localStorage.getItem("syp-lang");if(l==="ar"){document.documentElement.lang="ar";document.documentElement.dir="rtl";}}catch(e){}</script>
 <style>
 :root{
   --bg:#f4f6f5; --card:#ffffff; --text:#14201d; --muted:#5f6f6a; --line:#e2e8e6;
@@ -90,6 +90,16 @@ button:active{opacity:.7}
 .keys button{padding:10px 0;font-size:20px;border-radius:12px}
 .sum{min-height:20px;text-align:right;font-size:14px;font-weight:700;color:var(--accent);margin:0 6px 8px}
 .keyrow{display:flex;gap:8px}
+/* ---- Arabic / right-to-left ---- */
+#lang{width:40px;padding:8px 0;font-size:16px;font-weight:700}
+[dir="rtl"] body{font-family:-apple-system,BlinkMacSystemFont,"SF Arabic","Geeza Pro","Segoe UI","Noto Sans Arabic",Tahoma,sans-serif}
+[dir="rtl"] .card h2,[dir="rtl"] .card h2 em{letter-spacing:0;text-transform:none} /* letter-spacing breaks Arabic letter joining */
+[dir="rtl"] .card h2{font-size:14px}
+/* numbers, sums and the calculator always read left-to-right */
+.input input,.input output,.row .val,.sum,.stats b,#calls{direction:ltr;unicode-bidi:isolate}
+[dir="rtl"] .input input,[dir="rtl"] .input output{text-align:left}
+[dir="rtl"] .sum{text-align:left}
+.keys,.chart svg{direction:ltr}
 /* PC / tablet: two columns, converter left, graph + key right */
 @media (min-width: 900px){
   main{max-width:1080px;padding-left:32px;padding-right:32px}
@@ -114,51 +124,52 @@ body.is-offline .offline{display:block}
 <body>
 <main>
   <header>
-    <h1>SYP Converter</h1>
+    <h1 data-i18n="title">SYP Converter</h1>
     <div class="hbtns">
-      <button id="theme" type="button" aria-label="Switch light or dark mode">☀︎</button>
-      <button id="refresh" type="button">Refresh</button>
+      <button id="lang" type="button" data-i18n-aria="langAria" aria-label="Switch language" lang="ar">ع</button>
+      <button id="theme" type="button" data-i18n-aria="themeAria" aria-label="Switch light or dark mode">☀︎</button>
+      <button id="refresh" type="button" data-i18n="refresh">Refresh</button>
     </div>
   </header>
 
   <div class="cols">
   <div class="col">
-  <div class="offline">Offline. Showing last saved rates.</div>
+  <div class="offline" data-i18n="offline">Offline. Showing last saved rates.</div>
   <div class="seg" role="tablist">
-    <button type="button" id="mStreet" class="on">Street rate</button>
-    <button type="button" id="mOff">Central bank</button>
+    <button type="button" id="mStreet" class="on" data-i18n="street">Street rate</button>
+    <button type="button" id="mOff" data-i18n="central">Central bank</button>
   </div>
   <div class="using" id="using">…</div>
 
-  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect y="0.00" width="24" height="1.23" fill="#b22234"/><rect y="2.46" width="24" height="1.23" fill="#b22234"/><rect y="4.92" width="24" height="1.23" fill="#b22234"/><rect y="7.38" width="24" height="1.23" fill="#b22234"/><rect y="9.85" width="24" height="1.23" fill="#b22234"/><rect y="12.31" width="24" height="1.23" fill="#b22234"/><rect y="14.77" width="24" height="1.23" fill="#b22234"/><rect width="10" height="8.62" fill="#3c3b6e"/><circle cx="1.2" cy="1.00" r=".42" fill="#fff"/><circle cx="3.0" cy="1.00" r=".42" fill="#fff"/><circle cx="4.8" cy="1.00" r=".42" fill="#fff"/><circle cx="6.6" cy="1.00" r=".42" fill="#fff"/><circle cx="8.4" cy="1.00" r=".42" fill="#fff"/><circle cx="2.1" cy="2.65" r=".42" fill="#fff"/><circle cx="3.9" cy="2.65" r=".42" fill="#fff"/><circle cx="5.7" cy="2.65" r=".42" fill="#fff"/><circle cx="7.5" cy="2.65" r=".42" fill="#fff"/><circle cx="1.2" cy="4.30" r=".42" fill="#fff"/><circle cx="3.0" cy="4.30" r=".42" fill="#fff"/><circle cx="4.8" cy="4.30" r=".42" fill="#fff"/><circle cx="6.6" cy="4.30" r=".42" fill="#fff"/><circle cx="8.4" cy="4.30" r=".42" fill="#fff"/><circle cx="2.1" cy="5.95" r=".42" fill="#fff"/><circle cx="3.9" cy="5.95" r=".42" fill="#fff"/><circle cx="5.7" cy="5.95" r=".42" fill="#fff"/><circle cx="7.5" cy="5.95" r=".42" fill="#fff"/><circle cx="1.2" cy="7.60" r=".42" fill="#fff"/><circle cx="3.0" cy="7.60" r=".42" fill="#fff"/><circle cx="4.8" cy="7.60" r=".42" fill="#fff"/><circle cx="6.6" cy="7.60" r=".42" fill="#fff"/><circle cx="8.4" cy="7.60" r=".42" fill="#fff"/></svg>USD</span>
-    <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" aria-label="US dollars"></label>
-  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#007a3d"/><rect y="10.67" width="24" height="5.33" fill="#000"/><polygon fill="#ce1126" points="6,6.2 6.59,7.99 8.47,7.99 6.9399999999999995,9.1 7.53,10.9 6,9.79 4.47,10.9 5.0600000000000005,9.1 3.53,7.99 5.41,7.99"/><polygon fill="#ce1126" points="12,6.2 12.59,7.99 14.47,7.99 12.94,9.1 13.53,10.9 12,9.79 10.47,10.9 11.06,9.1 9.53,7.99 11.41,7.99"/><polygon fill="#ce1126" points="18,6.2 18.59,7.99 20.47,7.99 18.94,9.1 19.53,10.9 18,9.79 16.47,10.9 17.06,9.1 15.53,7.99 17.41,7.99"/></svg>New SYP</span>
-    <input id="nsyp" type="text" inputmode="decimal" autocomplete="off" aria-label="New Syrian pounds"></label>
-  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#007a3d"/><rect y="10.67" width="24" height="5.33" fill="#000"/><polygon fill="#ce1126" points="6,6.2 6.59,7.99 8.47,7.99 6.9399999999999995,9.1 7.53,10.9 6,9.79 4.47,10.9 5.0600000000000005,9.1 3.53,7.99 5.41,7.99"/><polygon fill="#ce1126" points="12,6.2 12.59,7.99 14.47,7.99 12.94,9.1 13.53,10.9 12,9.79 10.47,10.9 11.06,9.1 9.53,7.99 11.41,7.99"/><polygon fill="#ce1126" points="18,6.2 18.59,7.99 20.47,7.99 18.94,9.1 19.53,10.9 18,9.79 16.47,10.9 17.06,9.1 15.53,7.99 17.41,7.99"/></svg>Old SYP</span>
-    <input id="osyp" type="text" inputmode="decimal" autocomplete="off" aria-label="Old Syrian pounds"></label>
-  <div class="keys" aria-label="Calculator keys">
+  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect y="0.00" width="24" height="1.23" fill="#b22234"/><rect y="2.46" width="24" height="1.23" fill="#b22234"/><rect y="4.92" width="24" height="1.23" fill="#b22234"/><rect y="7.38" width="24" height="1.23" fill="#b22234"/><rect y="9.85" width="24" height="1.23" fill="#b22234"/><rect y="12.31" width="24" height="1.23" fill="#b22234"/><rect y="14.77" width="24" height="1.23" fill="#b22234"/><rect width="10" height="8.62" fill="#3c3b6e"/><circle cx="1.2" cy="1.00" r=".42" fill="#fff"/><circle cx="3.0" cy="1.00" r=".42" fill="#fff"/><circle cx="4.8" cy="1.00" r=".42" fill="#fff"/><circle cx="6.6" cy="1.00" r=".42" fill="#fff"/><circle cx="8.4" cy="1.00" r=".42" fill="#fff"/><circle cx="2.1" cy="2.65" r=".42" fill="#fff"/><circle cx="3.9" cy="2.65" r=".42" fill="#fff"/><circle cx="5.7" cy="2.65" r=".42" fill="#fff"/><circle cx="7.5" cy="2.65" r=".42" fill="#fff"/><circle cx="1.2" cy="4.30" r=".42" fill="#fff"/><circle cx="3.0" cy="4.30" r=".42" fill="#fff"/><circle cx="4.8" cy="4.30" r=".42" fill="#fff"/><circle cx="6.6" cy="4.30" r=".42" fill="#fff"/><circle cx="8.4" cy="4.30" r=".42" fill="#fff"/><circle cx="2.1" cy="5.95" r=".42" fill="#fff"/><circle cx="3.9" cy="5.95" r=".42" fill="#fff"/><circle cx="5.7" cy="5.95" r=".42" fill="#fff"/><circle cx="7.5" cy="5.95" r=".42" fill="#fff"/><circle cx="1.2" cy="7.60" r=".42" fill="#fff"/><circle cx="3.0" cy="7.60" r=".42" fill="#fff"/><circle cx="4.8" cy="7.60" r=".42" fill="#fff"/><circle cx="6.6" cy="7.60" r=".42" fill="#fff"/><circle cx="8.4" cy="7.60" r=".42" fill="#fff"/></svg><span data-i18n="usd">USD</span></span>
+    <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" data-i18n-aria="usdAria" aria-label="US dollars"></label>
+  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#007a3d"/><rect y="10.67" width="24" height="5.33" fill="#000"/><polygon fill="#ce1126" points="6,6.2 6.59,7.99 8.47,7.99 6.9399999999999995,9.1 7.53,10.9 6,9.79 4.47,10.9 5.0600000000000005,9.1 3.53,7.99 5.41,7.99"/><polygon fill="#ce1126" points="12,6.2 12.59,7.99 14.47,7.99 12.94,9.1 13.53,10.9 12,9.79 10.47,10.9 11.06,9.1 9.53,7.99 11.41,7.99"/><polygon fill="#ce1126" points="18,6.2 18.59,7.99 20.47,7.99 18.94,9.1 19.53,10.9 18,9.79 16.47,10.9 17.06,9.1 15.53,7.99 17.41,7.99"/></svg><span data-i18n="nsyp">New SYP</span></span>
+    <input id="nsyp" type="text" inputmode="decimal" autocomplete="off" data-i18n-aria="nsypAria" aria-label="New Syrian pounds"></label>
+  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#007a3d"/><rect y="10.67" width="24" height="5.33" fill="#000"/><polygon fill="#ce1126" points="6,6.2 6.59,7.99 8.47,7.99 6.9399999999999995,9.1 7.53,10.9 6,9.79 4.47,10.9 5.0600000000000005,9.1 3.53,7.99 5.41,7.99"/><polygon fill="#ce1126" points="12,6.2 12.59,7.99 14.47,7.99 12.94,9.1 13.53,10.9 12,9.79 10.47,10.9 11.06,9.1 9.53,7.99 11.41,7.99"/><polygon fill="#ce1126" points="18,6.2 18.59,7.99 20.47,7.99 18.94,9.1 19.53,10.9 18,9.79 16.47,10.9 17.06,9.1 15.53,7.99 17.41,7.99"/></svg><span data-i18n="osyp">Old SYP</span></span>
+    <input id="osyp" type="text" inputmode="decimal" autocomplete="off" data-i18n-aria="osypAria" aria-label="Old Syrian pounds"></label>
+  <div class="keys" data-i18n-aria="keysAria" aria-label="Calculator keys">
     <button type="button" data-k="+">+</button><button type="button" data-k="−">−</button>
     <button type="button" data-k="×">×</button><button type="button" data-k="÷">÷</button>
     <button type="button" data-k="=">=</button><button type="button" data-k="C">C</button>
   </div>
   <div class="sum" id="sumHint"></div>
-  <div class="input out"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg>EGP</span><output id="egp">–</output></div>
+  <div class="input out"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg><span data-i18n="egp">EGP</span></span><output id="egp">–</output></div>
 
   <section class="card">
-    <h2>Rates for $1 <em class="calls" id="calls"></em></h2>
-    <div class="row"><span class="label">Street (buy – sell)</span><span class="val" id="streetRate">…</span></div>
-    <div class="meta" id="streetMeta">Loading…</div>
-    <div class="row"><span class="label">Central bank</span><span class="val" id="offRate">…</span></div>
-    <div class="meta" id="offMeta">Loading…</div>
-    <div class="row"><span class="label">Egyptian pound</span><span class="val" id="egpRate">…</span></div>
-    <div class="meta" id="egpMeta">Loading…</div>
+    <h2><span data-i18n="ratesFor">Rates for $1</span> <em class="calls" id="calls"></em></h2>
+    <div class="row"><span class="label" data-i18n="streetLbl">Street (buy – sell)</span><span class="val" id="streetRate">…</span></div>
+    <div class="meta" id="streetMeta" data-i18n="loading">Loading…</div>
+    <div class="row"><span class="label" data-i18n="central">Central bank</span><span class="val" id="offRate">…</span></div>
+    <div class="meta" id="offMeta" data-i18n="loading">Loading…</div>
+    <div class="row"><span class="label" data-i18n="egpLbl">Egyptian pound</span><span class="val" id="egpRate">…</span></div>
+    <div class="meta" id="egpMeta" data-i18n="loading">Loading…</div>
   </section>
 
   </div>
   <div class="col">
   <section class="card chart">
-    <h2>Street rate by month
-      <select id="monthSel" aria-label="Choose month"></select>
+    <h2><span data-i18n="chartTitle">Street rate by month</span>
+      <select id="monthSel" data-i18n-aria="monthAria" aria-label="Choose month"></select>
     </h2>
     <div id="chartBox"></div>
     <div class="stats" id="chartStats"></div>
@@ -166,26 +177,98 @@ body.is-offline .offline{display:block}
   </section>
 
   <section class="card">
-    <h2>sp-today API key</h2>
+    <h2 data-i18n="keyTitle">sp-today API key</h2>
     <div class="keyrow" id="keyrow">
-      <input id="keyInput" type="password" autocomplete="off" placeholder="Paste your key" aria-label="sp-today API key">
-      <button id="keySave" type="button">Save</button>
+      <input id="keyInput" type="password" autocomplete="off" placeholder="Paste your key" data-i18n-ph="keyPh" data-i18n-aria="keyTitle" aria-label="sp-today API key">
+      <button id="keySave" type="button" data-i18n="save">Save</button>
     </div>
     <div class="meta" id="keyStatus"></div>
-    <button type="button" id="keyChange" style="margin-top:10px">Change key</button>
-    <div class="meta">Stored only on this device, never uploaded. Free plan: 100 calls/month, so the street rate updates up to 3 times a day: once when you first open the app, then each time you tap Refresh. The counter resets at midnight.</div>
+    <button type="button" id="keyChange" style="margin-top:10px" data-i18n="changeKey">Change key</button>
+    <div class="meta" data-i18n="keyNote">Stored only on this device, never uploaded. Free plan: 100 calls/month, so the street rate updates up to 3 times a day: once when you first open the app, then each time you tap Refresh. The counter resets at midnight.</div>
   </section>
 
   </div>
   </div>
 
-  <footer id="foot">Old SYP = New SYP × 100</footer>
+  <footer id="foot"></footer>
 </main>
 
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var rates = { street:null, official:null, egp:null };
+  // ---- Language (English / Arabic). Saved on the device for next time. ----
+  var I18N = {
+    en: {
+      title: "SYP Converter", refresh: "Refresh", themeAria: "Switch light or dark mode", langAria: "التبديل إلى العربية",
+      offline: "Offline. Showing last saved rates.", street: "Street rate", central: "Central bank",
+      usingStreet: "Using $1 = {r} new SYP (shop buy rate)", usingCentral: "Using $1 = {r} new SYP (central bank)", rateNA: "Rate unavailable",
+      usd: "USD", nsyp: "New SYP", osyp: "Old SYP", egp: "EGP",
+      usdAria: "US dollars", nsypAria: "New Syrian pounds", osypAria: "Old Syrian pounds", keysAria: "Calculator keys",
+      ratesFor: "Rates for $1", streetLbl: "Street (buy – sell)", egpLbl: "Egyptian pound", loading: "Loading…", na: "unavailable",
+      calls: "{left} of {n} left today",
+      metaLine: "{label} · {src} last changed it {when}", checkedAt: " · you checked at {t}",
+      justNow: "just now", minAgo: "{n} min ago", hAgo: "{n} h ago", dAgo: "{n} days ago",
+      liveDaily: "Live, source updates daily", backup: "Backup", offlineSaved: "Offline, last saved", noLoad: "Could not load rate",
+      liveDam: "Live, Damascus (buy – sell)", cantReach: "Couldn't reach sp-today ({e}), showing last saved", cantReach2: "Couldn't reach sp-today: {e}",
+      savedRefresh: "Saved, Damascus (buy – sell) · tap Refresh for newest", noneLeft: "Saved · no street updates left today",
+      addKey: "Add your sp-today key (API key box) to get live rates",
+      chartTitle: "Street rate by month", monthAria: "Choose month", chartAria: "Street rate chart",
+      chartEmpty: "No rates saved for this month yet. Each day you open the app adds a point to this graph.",
+      lowest: "Lowest", highest: "Highest", change: "Change",
+      sptChange: "{src}: {w} this week, {m} this month.", tapDot: "Tap a dot to see that day's rate (shop buy price).",
+      keyTitle: "sp-today API key", keyPh: "Paste your key", save: "Save", changeKey: "Change key",
+      keySaved: "✓ Key saved on this device (…{k}). No need to enter it again.", noKey: "No key saved yet.",
+      keyNote: "Stored only on this device, never uploaded. Free plan: 100 calls/month, so the street rate updates up to 3 times a day: once when you first open the app, then each time you tap Refresh. The counter resets at midnight.",
+      foot: "Old SYP = New SYP × 100", checked: "Checked {t}"
+    },
+    ar: {
+      title: "محوّل الليرة السورية", refresh: "تحديث", themeAria: "التبديل بين الوضع الفاتح والداكن", langAria: "Switch to English",
+      offline: "لا يوجد اتصال. تُعرض آخر أسعار محفوظة.", street: "سعر السوق", central: "المصرف المركزي",
+      usingStreet: "السعر المستخدم: 1 دولار = {r} ليرة جديدة (سعر الشراء في السوق)", usingCentral: "السعر المستخدم: 1 دولار = {r} ليرة جديدة (المصرف المركزي)", rateNA: "السعر غير متوفر",
+      usd: "دولار", nsyp: "ليرة جديدة", osyp: "ليرة قديمة", egp: "جنيه مصري",
+      usdAria: "دولار أمريكي", nsypAria: "ليرة سورية جديدة", osypAria: "ليرة سورية قديمة", keysAria: "أزرار الحاسبة",
+      ratesFor: "الأسعار مقابل 1 دولار", streetLbl: "السوق (شراء – مبيع)", egpLbl: "الجنيه المصري", loading: "جارٍ التحميل…", na: "غير متوفر",
+      calls: "متبقٍ اليوم: {left} من {n}",
+      metaLine: "{label} · آخر تغيير من {src}: {when}", checkedAt: " · فحصتَ الساعة {t}",
+      justNow: "الآن", minAgo: "قبل {n} دقيقة", hAgo: "قبل {n} ساعة", dAgo: "قبل {n} يوم",
+      liveDaily: "مباشر، المصدر يُحدَّث يومياً", backup: "نسخة احتياطية", offlineSaved: "دون اتصال، آخر قيمة محفوظة", noLoad: "تعذّر تحميل السعر",
+      liveDam: "مباشر، دمشق (شراء – مبيع)", cantReach: "تعذّر الوصول إلى ⁦sp-today⁩ ({e})، تُعرض آخر قيمة محفوظة", cantReach2: "تعذّر الوصول إلى ⁦sp-today⁩: {e}",
+      savedRefresh: "محفوظ، دمشق (شراء – مبيع) · اضغط «تحديث» لأحدث سعر", noneLeft: "محفوظ · لا تحديثات متبقية اليوم",
+      addKey: "أضف مفتاح ⁦sp-today⁩ (في خانة المفتاح) للحصول على الأسعار المباشرة",
+      chartTitle: "سعر السوق حسب الشهر", monthAria: "اختر الشهر", chartAria: "رسم سعر السوق",
+      chartEmpty: "لا توجد أسعار محفوظة لهذا الشهر بعد. كل يوم تفتح فيه التطبيق يضيف نقطة إلى الرسم.",
+      lowest: "الأدنى", highest: "الأعلى", change: "التغيّر",
+      sptChange: "حسب {src}: {w} هذا الأسبوع، {m} هذا الشهر.", tapDot: "اضغط على نقطة لرؤية سعر ذلك اليوم (سعر الشراء).",
+      keyTitle: "مفتاح ⁦API⁩ لموقع ⁦sp-today⁩", keyPh: "الصق المفتاح هنا", save: "حفظ", changeKey: "تغيير المفتاح",
+      keySaved: "✓ المفتاح محفوظ على هذا الجهاز (ينتهي بـ {k}). لا حاجة لإدخاله مجدداً.", noKey: "لم يُحفظ أي مفتاح بعد.",
+      keyNote: "يُحفظ على هذا الجهاز فقط ولا يُرفع إلى أي مكان. الخطة المجانية: 100 طلب شهرياً، لذلك يُحدَّث سعر السوق حتى 3 مرات يومياً: مرة عند أول فتح للتطبيق، ثم مع كل ضغطة على «تحديث». يُعاد ضبط العداد عند منتصف الليل.",
+      foot: "الليرة القديمة = الليرة الجديدة × 100", checked: "آخر فحص {t}"
+    }
+  };
+  var lang = "en";
+  try { lang = localStorage.getItem("syp-lang") === "ar" ? "ar" : "en"; } catch(e){}
+  // Keep numbers, times and % values left-to-right inside Arabic sentences.
+  function iso(x){ return lang === "ar" ? "⁦" + x + "⁩" : String(x); }
+  function t(k, v){
+    var str = (I18N[lang][k] != null ? I18N[lang][k] : I18N.en[k]) || k;
+    return str.replace(/\{(\w+)\}/g, function(_, n){ return v && v[n] != null ? v[n] : ""; });
+  }
+  var T = t;
+  // Dates/times: Arabic gets day + month name (no slashes), which reads naturally right-to-left.
+  function dt(d){ return lang === "ar" ? d.toLocaleString(loc(), { day: "numeric", month: "long", hour: "numeric", minute: "2-digit" }) : d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }); }
+  function tm(d){ return d.toLocaleTimeString(loc(), { hour: "numeric", minute: "2-digit" }); }
+  function loc(){ return lang === "ar" ? "ar-SY-u-nu-latn" : undefined; }
+  function applyStatic(){
+    var h = document.documentElement;
+    h.lang = lang; h.dir = lang === "ar" ? "rtl" : "ltr";
+    document.title = t("title");
+    document.querySelectorAll("[data-i18n]").forEach(function(el){ el.textContent = t(el.getAttribute("data-i18n")); });
+    document.querySelectorAll("[data-i18n-aria]").forEach(function(el){ el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"))); });
+    document.querySelectorAll("[data-i18n-ph]").forEach(function(el){ el.setAttribute("placeholder", t(el.getAttribute("data-i18n-ph"))); });
+    var lb = $("lang"); lb.textContent = lang === "ar" ? "EN" : "ع"; lb.setAttribute("lang", lang === "ar" ? "en" : "ar");
+  }
+
   var CACHE_KEY = "syp-rates-v1";
 
   function store(get, val){
@@ -197,11 +280,11 @@ body.is-offline .offline{display:block}
     if (n == null || !isFinite(n)) return "–";
     return n.toLocaleString("en-US", { maximumFractionDigits: d == null ? 2 : d, minimumFractionDigits: 0 });
   }
-  function ago(iso){
-    if (!iso) return "";
-    var t = new Date(iso), s = (Date.now() - t) / 1000;
-    var rel = s < 90 ? "just now" : s < 3600 ? Math.round(s/60) + " min ago" : s < 86400 ? Math.round(s/3600) + " h ago" : Math.round(s/86400) + " days ago";
-    return t.toLocaleString([], { dateStyle:"medium", timeStyle:"short" }) + " (" + rel + ")";
+  function ago(when){
+    if (!when) return "";
+    var t = new Date(when), s = (Date.now() - t) / 1000;
+    var rel = s < 90 ? T("justNow") : s < 3600 ? T("minAgo", { n: Math.round(s/60) }) : s < 86400 ? T("hAgo", { n: Math.round(s/3600) }) : T("dAgo", { n: Math.round(s/86400) });
+    return dt(t) + " (" + rel + ")";
   }
   var mode = "street", src = "usd", srcVal = 1;
   try { mode = localStorage.getItem("syp-mode") || "street"; } catch(e){}
@@ -239,10 +322,10 @@ body.is-offline .offline{display:block}
     var s = rates.street, o = rates.official, e = rates.egp, r = rate();
     $("mStreet").className = mode === "street" ? "on" : "";
     $("mOff").className = mode === "street" ? "" : "on";
-    $("using").textContent = r ? "Using $1 = " + fmt(r) + " new SYP" + (mode === "street" ? " (shop buy rate)" : " (central bank)") : "Rate unavailable";
-    $("streetRate").textContent = s ? fmt(s.buy) + (s.sell && s.sell !== s.buy ? " – " + fmt(s.sell) : "") : "unavailable";
-    $("offRate").textContent = o ? fmt(o.mid) : "unavailable";
-    $("egpRate").textContent = e ? fmt(e.rate) : "unavailable";
+    $("using").textContent = r ? t(mode === "street" ? "usingStreet" : "usingCentral", { r: iso(fmt(r)) }) : t("rateNA");
+    $("streetRate").textContent = s ? fmt(s.buy) + (s.sell && s.sell !== s.buy ? " – " + fmt(s.sell) : "") : t("na");
+    $("offRate").textContent = o ? fmt(o.mid) : t("na");
+    $("egpRate").textContent = e ? fmt(e.rate) : t("na");
 
     var usd = null;
     if (srcVal != null && r){
@@ -256,12 +339,16 @@ body.is-offline .offline{display:block}
     $("egp").textContent = usd != null && e ? fmt(usd * e.rate) : "–";
   }
 
-  function meta(id, r, label, status){
-    var el = $(id);
+  var metaState = {};
+  function meta(id, r, key, status, vars){
+    metaState[id] = [r, key, status, vars];
+    var el = $(id), label = t(key, vars);
     el.className = "meta" + (status ? " " + status : "");
-    el.textContent = r ? label + " · " + (r.source || "") + " last changed it " + ago(r.updated) +
-      (r.checkedAt ? " · you checked at " + new Date(r.checkedAt).toLocaleTimeString([], { timeStyle:"short" }) : "") : label;
+    el.removeAttribute("data-i18n");
+    el.textContent = r ? t("metaLine", { label: label, src: iso(r.source || ""), when: ago(r.updated) }) +
+      (r.checkedAt ? t("checkedAt", { t: tm(new Date(r.checkedAt)) }) : "") : label;
   }
+  function redoMeta(){ Object.keys(metaState).forEach(function(id){ var m = metaState[id]; meta(id, m[0], m[1], m[2], m[3]); }); }
 
   function withTimeout(p, ms){
     return Promise.race([p, new Promise(function(_, rej){ setTimeout(function(){ rej(new Error("timeout")); }, ms); })]);
@@ -293,11 +380,14 @@ body.is-offline .offline{display:block}
   function useCall(){ try { localStorage.setItem(CALLS_KEY, JSON.stringify({ day: today(), used: usedToday() + 1 })); } catch(e){} showCalls(); }
   function showCalls(){
     var left = Math.max(0, DAILY - usedToday());
-    $("calls").textContent = left + " of " + DAILY + " left today";
+    $("calls").textContent = t("calls", { left: left, n: DAILY });
     $("calls").className = "calls" + (left ? "" : " none");
   }
 
-  var loading = false;
+  var loading = false, lastChecked = null;
+  function showFoot(){
+    $("foot").textContent = (lastChecked ? t("checked", { t: tm(new Date(lastChecked)) }) + " · " : "") + t("foot");
+  }
   function load(force){
     force = force === true;
     if (loading) return; loading = true;
@@ -309,17 +399,17 @@ body.is-offline .offline{display:block}
     var pOfficial = withTimeout(getJSON("https://open.er-api.com/v6/latest/USD"), 8000).then(function(j){
       var upd = new Date(j.time_last_update_unix * 1000).toISOString();
       var off = toNewSyp(j.rates.SYP);
-      if (off) { rates.official = { mid: off, source: "open.er-api.com", updated: upd }; meta("offMeta", rates.official, "Live, source updates daily"); }
-      if (j.rates.EGP) { rates.egp = { rate: j.rates.EGP, source: "open.er-api.com", updated: upd }; meta("egpMeta", rates.egp, "Live, source updates daily"); }
+      if (off) { rates.official = { mid: off, source: "open.er-api.com", updated: upd }; meta("offMeta", rates.official, "liveDaily"); }
+      if (j.rates.EGP) { rates.egp = { rate: j.rates.EGP, source: "open.er-api.com", updated: upd }; meta("egpMeta", rates.egp, "liveDaily"); }
       if (!off) throw new Error("no SYP");
     }).catch(function(){
       return backup.then(function(b){
-        if (b && b.official){ rates.official = b.official; meta("offMeta", b.official, "Backup", "warn"); }
-        else if (rates.official) meta("offMeta", rates.official, "Offline, last saved", "err");
-        else meta("offMeta", null, "Could not load rate", "err");
-        if (b && b.egp){ rates.egp = b.egp; meta("egpMeta", b.egp, "Backup", "warn"); }
-        else if (rates.egp) meta("egpMeta", rates.egp, "Offline, last saved", "err");
-        else meta("egpMeta", null, "Could not load rate", "err");
+        if (b && b.official){ rates.official = b.official; meta("offMeta", b.official, "backup", "warn"); }
+        else if (rates.official) meta("offMeta", rates.official, "offlineSaved", "err");
+        else meta("offMeta", null, "noLoad", "err");
+        if (b && b.egp){ rates.egp = b.egp; meta("egpMeta", b.egp, "backup", "warn"); }
+        else if (rates.egp) meta("egpMeta", rates.egp, "offlineSaved", "err");
+        else meta("egpMeta", null, "noLoad", "err");
       });
     });
 
@@ -339,27 +429,27 @@ body.is-offline .offline{display:block}
           var dd = j.data.currency.cities.damascus;
           rates.street.chgWeek = dd.change_week; rates.street.chgMonth = dd.change_month;
           addPoint(rates.street);
-          meta("streetMeta", rates.street, "Live, Damascus (buy – sell)");
+          meta("streetMeta", rates.street, "liveDam");
         })
         .catch(function(e){
-          if (rates.street) meta("streetMeta", rates.street, "Couldn't reach sp-today (" + e.message + "), showing last saved", "err");
-          else meta("streetMeta", null, "Couldn't reach sp-today: " + e.message, "err");
+          if (rates.street) meta("streetMeta", rates.street, "cantReach", "err", { e: e.message });
+          else meta("streetMeta", null, "cantReach2", "err", { e: e.message });
         });
     } else if (key) {
-      meta("streetMeta", rates.street, left > 0 ? "Saved, Damascus (buy – sell) · tap Refresh for newest" : "Saved · no street updates left today", left > 0 ? "" : "warn");
+      meta("streetMeta", rates.street, left > 0 ? "savedRefresh" : "noneLeft", left > 0 ? "" : "warn");
       pStreet = Promise.resolve();
     } else {
       pStreet = backup.then(function(b){
         if (!rates.street && b && b.street) rates.street = b.street;
-        meta("streetMeta", rates.street, "Add your sp-today key (API key box) to get live rates", "warn");
+        meta("streetMeta", rates.street, "addKey", "warn");
       });
     }
 
     Promise.all([pOfficial, pStreet]).then(function(){
       document.body.classList.toggle("is-offline", !navigator.onLine);
       render(); store(false, rates); showSptChange();
-      $("foot").textContent = "Checked " + new Date().toLocaleTimeString([], { timeStyle:"short" }) + " · Old SYP = New SYP × 100";
-      loading = false; $("refresh").textContent = "Refresh";
+      lastChecked = Date.now(); showFoot();
+      loading = false; $("refresh").textContent = t("refresh");
     });
     pOfficial.then(render); pStreet.then(render);
   }
@@ -382,7 +472,7 @@ body.is-offline .offline{display:block}
     var list = Object.keys(keys).sort().reverse();
     sel.innerHTML = list.map(function(k){
       var y = +k.slice(0, 4), m = +k.slice(5) - 1;
-      return '<option value="' + k + '">' + new Date(y, m, 1).toLocaleDateString([], { month: "long", year: "numeric" }) + "</option>";
+      return '<option value="' + k + '">' + new Date(y, m, 1).toLocaleDateString(loc(), { month: "long", year: "numeric" }) + "</option>";
     }).join("");
     sel.value = list.indexOf(cur) >= 0 ? cur : list[0];
   }
@@ -396,7 +486,7 @@ body.is-offline .offline{display:block}
     var pts = Object.keys(byDay).map(Number).sort(function(a, b){ return a - b; }).map(function(d){ return { d: d, v: byDay[d].buy }; });
     var box = $("chartBox"), stats = $("chartStats");
     if (!pts.length){
-      box.innerHTML = '<div class="meta">No rates saved for this month yet. Each day you open the app adds a point to this graph.</div>';
+      box.innerHTML = '<div class="meta">' + t("chartEmpty") + "</div>";
       stats.innerHTML = ""; return;
     }
     var W = 340, H = 190, L = 40, R = 10, T = 18, B = 24;
@@ -421,24 +511,25 @@ body.is-offline .offline{display:block}
       g += '<circle class="pt' + (p === sel ? " sel" : "") + '" data-d="' + p.d + '" cx="' + X(p.d) + '" cy="' + Y(p.v) + '" r="' + (p === sel ? 5 : 3.5) + '"/>';
     });
     var tx = Math.min(W - R - 45, Math.max(L + 45, X(sel.d)));
-    g += '<text class="tip" x="' + tx + '" y="' + (Y(sel.v) - 10) + '" text-anchor="middle">' + new Date(y, m, sel.d).toLocaleDateString([], { month: "short", day: "numeric" }) + ": " + fmt(sel.v) + "</text>";
-    box.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Street rate chart">' + g + "</svg>";
+    g += '<text class="tip" x="' + tx + '" y="' + (Y(sel.v) - 10) + '" text-anchor="middle">' + (lang === "ar" ? fmt(sel.v) + " · " + sel.d + "/" + (m + 1) : new Date(y, m, sel.d).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ": " + fmt(sel.v)) + "</text>";
+    box.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + t("chartAria") + '">' + g + "</svg>";
     box.querySelectorAll(".pt").forEach(function(c){
       c.addEventListener("click", function(){ selDay = +c.getAttribute("data-d"); drawChart(); });
     });
     var first = pts[0].v, last = pts[pts.length - 1].v, diff = last - first;
     stats.innerHTML =
-      "<div><b>" + fmt(Math.min.apply(null, vals)) + "</b><span>Lowest</span></div>" +
-      "<div><b>" + fmt(Math.max.apply(null, vals)) + "</b><span>Highest</span></div>" +
-      "<div><b>" + (diff > 0 ? "▲ +" : diff < 0 ? "▼ " : "") + fmt(diff) + "</b><span>Change</span></div>";
+      "<div><b>" + fmt(Math.min.apply(null, vals)) + "</b><span>" + t("lowest") + "</span></div>" +
+      "<div><b>" + fmt(Math.max.apply(null, vals)) + "</b><span>" + t("highest") + "</span></div>" +
+      "<div><b>" + (diff > 0 ? "▲ +" : diff < 0 ? "▼ " : "") + fmt(diff) + "</b><span>" + t("change") + "</span></div>";
   }
   function showSptChange(){
     var s = rates.street, el = $("sptChange");
-    el.textContent = s && s.chgMonth != null ? "sp-today: " + (s.chgWeek >= 0 ? "+" : "") + fmt(s.chgWeek, 2) + "% this week, " + (s.chgMonth >= 0 ? "+" : "") + fmt(s.chgMonth, 2) + "% this month." : "Tap a dot to see that day's rate (shop buy price).";
+    el.textContent = s && s.chgMonth != null ? t("sptChange", { src: iso("sp-today"), w: iso((s.chgWeek >= 0 ? "+" : "") + fmt(s.chgWeek, 2) + "%"), m: iso((s.chgMonth >= 0 ? "+" : "") + fmt(s.chgMonth, 2) + "%") }) : t("tapDot");
   }
   $("monthSel").addEventListener("change", function(){ selDay = null; drawChart(); });
 
   // Show last saved rates instantly, then fetch fresh ones.
+  applyStatic(); showFoot();
   var cached = store(true);
   if (cached){ rates = cached; render(); }
   try { localStorage.removeItem("syp-hist-v1"); } catch(e){}
@@ -518,8 +609,7 @@ body.is-offline .offline{display:block}
   });
   function keyState(){
     var k = getKey();
-    $("keyStatus").textContent = k ? "✓ Key saved on this device (…" + k.slice(-4) + "). No need to enter it again." : "No key saved yet.";
-    $("keySave").textContent = "Save";
+    $("keyStatus").textContent = k ? t("keySaved", { k: iso(k.slice(-4)) }) : t("noKey");
     $("keyrow").style.display = k ? "none" : "";
     $("keyChange").style.display = k ? "" : "none";
   }
@@ -541,6 +631,12 @@ body.is-offline .offline{display:block}
     themeIcon();
   });
   themeIcon();
+  function setLang(l){
+    lang = l;
+    try { localStorage.setItem("syp-lang", l); } catch(e){}
+    applyStatic(); render(); showCalls(); keyState(); fillMonths(); drawChart(); showSptChange(); redoMeta(); showFoot(); showSum();
+  }
+  $("lang").addEventListener("click", function(){ setLang(lang === "ar" ? "en" : "ar"); });
   document.addEventListener("visibilitychange", function(){ if (!document.hidden) load(false); });
   load(false);
 })();
