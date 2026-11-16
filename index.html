@@ -97,6 +97,22 @@ label.input{cursor:text;-webkit-tap-highlight-color:transparent}
 .keys button{padding:10px 0;font-size:20px;border-radius:12px}
 .sum{min-height:20px;text-align:right;font-size:14px;font-weight:700;color:var(--accent);margin:0 6px 8px}
 .keyrow{display:flex;gap:8px}
+/* ---- Quick amounts, pinned totals, toast ---- */
+.chips{display:flex;gap:8px;overflow-x:auto;margin:-8px 0 14px;padding:2px 0;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chips button{flex:none;padding:8px 14px;font-size:15px}
+label.input,.input.out{-webkit-touch-callout:none}
+.input.copied{border-color:var(--accent);background:var(--accent-soft)}
+.pinbar{position:fixed;left:0;right:0;top:0;z-index:20;display:flex;justify-content:center;gap:14px;flex-wrap:wrap;
+  padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:var(--accent);color:var(--on-accent);
+  font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.pinbar[hidden],.toast[hidden]{display:none}
+.pinbar span{white-space:nowrap;direction:ltr;unicode-bidi:isolate}
+.pinbar small{font-weight:500;opacity:.85}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 24px);transform:translateX(-50%);z-index:30;
+  background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;
+  box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:90vw;text-align:center}
+@media (min-width: 900px){ .pinbar{display:none} }
 /* ---- Arabic / right-to-left ---- */
 #lang{width:40px;padding:8px 0;font-size:16px;font-weight:700}
 [dir="rtl"] body{font-family:-apple-system,BlinkMacSystemFont,"SF Arabic","Geeza Pro","Segoe UI","Noto Sans Arabic",Tahoma,sans-serif}
@@ -129,6 +145,8 @@ body.is-offline .offline{display:block}
 </style>
 </head>
 <body>
+<div class="pinbar" id="pinbar" hidden aria-live="polite"></div>
+<div class="toast" id="toast" role="status" hidden></div>
 <main>
   <header>
     <h1 data-i18n="title">SYP Converter</h1>
@@ -147,6 +165,12 @@ body.is-offline .offline{display:block}
     <button type="button" id="mOff" data-i18n="central">Central bank</button>
   </div>
   <div class="using" id="using">…</div>
+  <div class="chips" id="chips" data-i18n-aria="chipsAria" aria-label="Quick amounts">
+    <button type="button" data-box="usd" data-v="10">$10</button>
+    <button type="button" data-box="usd" data-v="50">$50</button>
+    <button type="button" data-box="usd" data-v="100">$100</button>
+    <button type="button" data-box="osyp" data-v="100000" data-i18n="chip100k">100K old</button>
+  </div>
 
   <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect y="0.00" width="24" height="1.23" fill="#b22234"/><rect y="2.46" width="24" height="1.23" fill="#b22234"/><rect y="4.92" width="24" height="1.23" fill="#b22234"/><rect y="7.38" width="24" height="1.23" fill="#b22234"/><rect y="9.85" width="24" height="1.23" fill="#b22234"/><rect y="12.31" width="24" height="1.23" fill="#b22234"/><rect y="14.77" width="24" height="1.23" fill="#b22234"/><rect width="10" height="8.62" fill="#3c3b6e"/><circle cx="1.2" cy="1.00" r=".42" fill="#fff"/><circle cx="3.0" cy="1.00" r=".42" fill="#fff"/><circle cx="4.8" cy="1.00" r=".42" fill="#fff"/><circle cx="6.6" cy="1.00" r=".42" fill="#fff"/><circle cx="8.4" cy="1.00" r=".42" fill="#fff"/><circle cx="2.1" cy="2.65" r=".42" fill="#fff"/><circle cx="3.9" cy="2.65" r=".42" fill="#fff"/><circle cx="5.7" cy="2.65" r=".42" fill="#fff"/><circle cx="7.5" cy="2.65" r=".42" fill="#fff"/><circle cx="1.2" cy="4.30" r=".42" fill="#fff"/><circle cx="3.0" cy="4.30" r=".42" fill="#fff"/><circle cx="4.8" cy="4.30" r=".42" fill="#fff"/><circle cx="6.6" cy="4.30" r=".42" fill="#fff"/><circle cx="8.4" cy="4.30" r=".42" fill="#fff"/><circle cx="2.1" cy="5.95" r=".42" fill="#fff"/><circle cx="3.9" cy="5.95" r=".42" fill="#fff"/><circle cx="5.7" cy="5.95" r=".42" fill="#fff"/><circle cx="7.5" cy="5.95" r=".42" fill="#fff"/><circle cx="1.2" cy="7.60" r=".42" fill="#fff"/><circle cx="3.0" cy="7.60" r=".42" fill="#fff"/><circle cx="4.8" cy="7.60" r=".42" fill="#fff"/><circle cx="6.6" cy="7.60" r=".42" fill="#fff"/><circle cx="8.4" cy="7.60" r=".42" fill="#fff"/></svg><span data-i18n="usd">USD</span></span>
     <input id="usd" type="text" inputmode="decimal" autocomplete="off" value="1" data-i18n-aria="usdAria" aria-label="US dollars"></label>
@@ -197,6 +221,7 @@ body.is-offline .offline{display:block}
   </div>
   </div>
 
+  <div class="meta" style="text-align:center;margin-top:18px" data-i18n="tips">Tip: hold a box to copy its number · swipe the boxes to switch rate</div>
   <footer id="foot"></footer>
 </main>
 
@@ -227,7 +252,9 @@ body.is-offline .offline{display:block}
       keyTitle: "sp-today API key", keyPh: "Paste your key", save: "Save", changeKey: "Change key",
       keySaved: "✓ Key saved on this device (…{k}). No need to enter it again.", noKey: "No key saved yet.",
       keyNote: "Stored only on this device, never uploaded. Free plan: 100 calls/month, so the street rate updates up to 3 times a day: once when you first open the app, then each time you tap Refresh. The counter resets at midnight.",
-      foot: "Old SYP = New SYP × 100", checked: "Checked {t}"
+      foot: "Old SYP = New SYP × 100", checked: "Checked {t}",
+      chipsAria: "Quick amounts", chip100k: "100K old", copied: "Copied {v}", swipedTo: "Using {m}",
+      tips: "Tip: hold a box to copy its number · swipe the boxes to switch rate"
     },
     ar: {
       title: "محوّل الليرة السورية", refresh: "تحديث", themeAria: "التبديل بين الوضع الفاتح والداكن", langAria: "Switch to English",
@@ -250,7 +277,9 @@ body.is-offline .offline{display:block}
       keyTitle: "مفتاح ⁦API⁩ لموقع ⁦sp-today⁩", keyPh: "الصق المفتاح هنا", save: "حفظ", changeKey: "تغيير المفتاح",
       keySaved: "✓ المفتاح محفوظ على هذا الجهاز (ينتهي بـ {k}). لا حاجة لإدخاله مجدداً.", noKey: "لم يُحفظ أي مفتاح بعد.",
       keyNote: "يُحفظ على هذا الجهاز فقط ولا يُرفع إلى أي مكان. الخطة المجانية: 100 طلب شهرياً، لذلك يُحدَّث سعر السوق حتى 3 مرات يومياً: مرة عند أول فتح للتطبيق، ثم مع كل ضغطة على «تحديث». يُعاد ضبط العداد عند منتصف الليل.",
-      foot: "الليرة القديمة = الليرة الجديدة × 100", checked: "آخر فحص {t}"
+      foot: "الليرة القديمة = الليرة الجديدة × 100", checked: "آخر فحص {t}",
+      chipsAria: "مبالغ سريعة", chip100k: "100 ألف قديمة", copied: "تم نسخ {v}", swipedTo: "يُستخدم الآن: {m}",
+      tips: "نصيحة: اضغط مطوّلاً على خانة لنسخ رقمها · اسحب الخانات يميناً أو يساراً لتبديل السعر"
     }
   };
   var lang = "en";
@@ -659,12 +688,92 @@ body.is-offline .offline{display:block}
     el.focus();
   }
   document.querySelectorAll(".keys button").forEach(function(btn){
-    var go = function(e){ e.preventDefault(); press(btn.dataset.k); };
+    var go = function(e){ e.preventDefault(); buzz(8); press(btn.dataset.k); pinbar(); };
     btn.addEventListener("touchstart", go, { passive: false });
     btn.addEventListener("mousedown", go);
   });
 
-  function setMode(m){ mode = m; try { localStorage.setItem("syp-mode", m); } catch(e){} render(); }
+  function setMode(m){ mode = m; try { localStorage.setItem("syp-mode", m); } catch(e){} render(); pinbar(); }
+
+  // ---- Mobile helpers ----
+  // Light vibration (Android only; iPhone browsers don't allow web pages to vibrate).
+  function buzz(ms){ try { if (navigator.vibrate) navigator.vibrate(ms || 10); } catch(e){} }
+  var toastTimer;
+  function toast(msg){
+    var el = $("toast"); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.hidden = true; }, 1600);
+  }
+  function copyText(txt){
+    var done = function(){ toast(t("copied", { v: iso(txt) })); buzz(15); };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done, function(){ legacyCopy(txt) && done(); });
+    } else if (legacyCopy(txt)) done();
+  }
+  function legacyCopy(txt){
+    try {
+      var ta = document.createElement("textarea"); ta.value = txt; ta.setAttribute("readonly", "");
+      ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, txt.length);
+      var ok = document.execCommand("copy"); document.body.removeChild(ta); return ok;
+    } catch(e){ return false; }
+  }
+  // Hold a box (about half a second) and lift your finger to copy its number.
+  // The copy happens on release, because iPhone only allows copying during a touch.
+  document.querySelectorAll("label.input, .input.out").forEach(function(box){
+    var t0 = 0, sx = 0, sy = 0, moved = false;
+    box.addEventListener("touchstart", function(e){ t0 = Date.now(); moved = false; sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+    box.addEventListener("touchmove", function(e){ if (Math.abs(e.touches[0].clientX - sx) > 10 || Math.abs(e.touches[0].clientY - sy) > 10) moved = true; }, { passive: true });
+    box.addEventListener("touchend", function(e){
+      if (moved || !t0 || Date.now() - t0 < 500) return;
+      var f = box.querySelector("input, output"), v = f.tagName === "INPUT" ? f.value : f.textContent;
+      if (num(v) == null) return;
+      e.preventDefault();
+      copyText(fmt(num(v), f.id === "osyp" ? 0 : 2));
+      box.classList.add("copied"); setTimeout(function(){ box.classList.remove("copied"); }, 600);
+    });
+  });
+  // Swipe left/right across the boxes to switch between Street rate and Central bank.
+  (function(){
+    var area = $("usd").closest(".col"), sx = 0, sy = 0, st = 0, ok = false;
+    area.addEventListener("touchstart", function(e){
+      ok = !e.target.closest(".keys, .chips, .seg, .card, input:focus");
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY; st = Date.now();
+    }, { passive: true });
+    area.addEventListener("touchend", function(e){
+      if (!ok) return;
+      var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - st < 800){
+        setMode(mode === "street" ? "official" : "street"); buzz(10);
+        toast(t("swipedTo", { m: t(mode === "street" ? "street" : "central") }));
+      }
+    }, { passive: true });
+  })();
+  // Quick amounts.
+  document.querySelectorAll("#chips button").forEach(function(b){
+    b.addEventListener("click", function(){
+      var id = b.dataset.box, el = $(id);
+      el.value = fmt(+b.dataset.v, id === "osyp" ? 0 : 2); src = id; srcVal = +b.dataset.v; lastBox = id;
+      render(); showSum(); buzz(10);
+    });
+  });
+  // Totals pinned to the top of the screen while typing on a phone, so the keyboard never hides them.
+  function pinbar(){
+    var bar = $("pinbar"), a = document.activeElement && document.activeElement.id;
+    var on = (a === "usd" || a === "nsyp" || a === "osyp") && window.matchMedia("(max-width: 899px)").matches;
+    if (!on){ bar.hidden = true; return; }
+    var r = rate(), usd = srcVal != null && r ? (src === "usd" ? srcVal : src === "nsyp" ? srcVal / r : srcVal / 100 / r) : null;
+    var cell = function(v, d, lbl){ return "<span>" + (v == null ? "–" : fmt(v, d)) + " <small>" + lbl + "</small></span>"; };
+    bar.innerHTML = cell(usd, 2, "$") + cell(usd != null ? usd * r : null, 2, t("nsyp")) + cell(usd != null ? usd * r * 100 : null, 0, t("osyp"));
+    bar.hidden = false; placePin();
+  }
+  // Keep the bar at the top of what's visible even when the keyboard shifts the page.
+  function placePin(){ var vv = window.visualViewport; $("pinbar").style.transform = vv ? "translateY(" + Math.max(0, vv.offsetTop) + "px)" : ""; }
+  if (window.visualViewport){ window.visualViewport.addEventListener("scroll", placePin); window.visualViewport.addEventListener("resize", placePin); }
+  ["usd", "nsyp", "osyp"].forEach(function(id){
+    $(id).addEventListener("focus", pinbar);
+    $(id).addEventListener("input", pinbar);
+    $(id).addEventListener("blur", function(){ setTimeout(pinbar, 0); });
+  });
   $("mStreet").addEventListener("click", function(){ setMode("street"); });
   $("mOff").addEventListener("click", function(){ setMode("official"); });
   $("refresh").addEventListener("click", function(){ load(true); });
