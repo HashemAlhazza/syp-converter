@@ -6,14 +6,14 @@
     "updated": "2026-11-06T23:55:00Z"
   },
   "official": {
-    "mid": 121.74,
+    "mid": 121.72,
     "source": "open.er-api.com",
-    "updated": "2026-11-19T00:02:31.000Z"
+    "updated": "2026-11-20T00:02:32.000Z"
   },
   "egp": {
-    "rate": 53.794909,
+    "rate": 53.814593,
     "source": "open.er-api.com",
-    "updated": "2026-11-19T00:02:31.000Z"
+    "updated": "2026-11-20T00:02:32.000Z"
   },
-  "checked": "2026-11-19T08:56:05.359Z"
+  "checked": "2026-11-20T08:42:44.300Z"
 }
