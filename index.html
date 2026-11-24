@@ -184,7 +184,8 @@ body.is-offline .offline{display:block}
     <button type="button" data-k="=">=</button><button type="button" data-k="C">C</button>
   </div>
   <div class="sum" id="sumHint" hidden></div>
-  <div class="input out"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg><span data-i18n="egp">EGP</span></span><output id="egp">–</output></div>
+  <label class="input"><span class="cur"><svg class="flag" viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#fff"/><rect width="24" height="5.33" fill="#ce1126"/><rect y="10.67" width="24" height="5.33" fill="#000"/><path d="M12 6.1c-.5 0-.8.4-.8.8l-.9.3.4 2.4h2.6l.4-2.4-.9-.3c0-.4-.3-.8-.8-.8z" fill="#c09300"/></svg><span data-i18n="egp">EGP</span></span>
+    <input id="egp" type="text" inputmode="decimal" autocomplete="off" data-i18n-aria="egpAria" aria-label="Egyptian pounds"></label>
 
   <section class="card">
     <h2><span data-i18n="ratesFor">Rates for $1</span> <em class="calls" id="calls"></em></h2>
@@ -236,7 +237,7 @@ body.is-offline .offline{display:block}
       offline: "Offline. Showing last saved rates.", street: "Street rate", central: "Central bank",
       usingStreet: "Using $1 = {r} new SYP (shop buy rate)", usingCentral: "Using $1 = {r} new SYP (central bank)", rateNA: "Rate unavailable",
       usd: "USD", nsyp: "New SYP", osyp: "Old SYP", egp: "EGP",
-      usdAria: "US dollars", nsypAria: "New Syrian pounds", osypAria: "Old Syrian pounds", keysAria: "Calculator keys",
+      usdAria: "US dollars", nsypAria: "New Syrian pounds", osypAria: "Old Syrian pounds", egpAria: "Egyptian pounds", keysAria: "Calculator keys",
       ratesFor: "Rates for $1", streetLbl: "Street (buy – sell)", egpLbl: "Egyptian pound", loading: "Loading…", na: "unavailable",
       calls: "{left} of {n} left today",
       metaLine: "{label} · {src} last changed it {when}", checkedAt: " · you checked at {t}",
@@ -261,7 +262,7 @@ body.is-offline .offline{display:block}
       offline: "لا يوجد اتصال. تُعرض آخر أسعار محفوظة.", street: "سعر السوق", central: "المصرف المركزي",
       usingStreet: "السعر المستخدم: 1 دولار = {r} ليرة جديدة (سعر الشراء في السوق)", usingCentral: "السعر المستخدم: 1 دولار = {r} ليرة جديدة (المصرف المركزي)", rateNA: "السعر غير متوفر",
       usd: "دولار", nsyp: "ليرة جديدة", osyp: "ليرة قديمة", egp: "جنيه مصري",
-      usdAria: "دولار أمريكي", nsypAria: "ليرة سورية جديدة", osypAria: "ليرة سورية قديمة", keysAria: "أزرار الحاسبة",
+      usdAria: "دولار أمريكي", nsypAria: "ليرة سورية جديدة", osypAria: "ليرة سورية قديمة", egpAria: "جنيه مصري", keysAria: "أزرار الحاسبة",
       ratesFor: "الأسعار مقابل 1 دولار", streetLbl: "السوق (شراء – مبيع)", egpLbl: "الجنيه المصري", loading: "جارٍ التحميل…", na: "غير متوفر",
       calls: "متبقٍ اليوم: {left} من {n}",
       metaLine: "{label} · آخر تغيير من {src}: {when}", checkedAt: " · فحصتَ الساعة {t}",
@@ -361,6 +362,23 @@ body.is-offline .offline{display:block}
     return rates.official ? rates.official.mid : null;
   }
 
+  var BOXES = ["usd", "nsyp", "osyp", "egp"];
+  function dec(id){ return id === "osyp" ? 0 : 2; }
+  // Dollars for what's typed in the source box. EGP uses its own rate, so it still
+  // converts to dollars when the SYP rate is missing (and the other way round).
+  function toUsd(){
+    if (srcVal == null) return null;
+    if (src === "usd") return srcVal;
+    if (src === "egp") return rates.egp && rates.egp.rate ? srcVal / rates.egp.rate : null;
+    var r = rate();
+    if (!r) return null;
+    return src === "nsyp" ? srcVal / r : srcVal / 100 / r;
+  }
+  function boxVals(){
+    var r = rate(), e = rates.egp, usd = toUsd();
+    return { usd: usd, nsyp: usd != null && r ? usd * r : null, osyp: usd != null && r ? usd * r * 100 : null,
+      egp: usd != null && e && e.rate ? usd * e.rate : null };
+  }
   function render(){
     var s = rates.street, o = rates.official, e = rates.egp, r = rate();
     $("mStreet").className = mode === "street" ? "on" : "";
@@ -370,16 +388,11 @@ body.is-offline .offline{display:block}
     $("offRate").textContent = o ? fmt(o.mid) : t("na");
     $("egpRate").textContent = e ? fmt(e.rate) : t("na");
 
-    var usd = null;
-    if (srcVal != null && r){
-      usd = src === "usd" ? srcVal : src === "nsyp" ? srcVal / r : srcVal / 100 / r;
-    }
-    var vals = { usd: usd, nsyp: usd != null ? usd * r : null, osyp: usd != null ? usd * r * 100 : null };
-    ["usd", "nsyp", "osyp"].forEach(function(id){
+    var vals = boxVals();
+    BOXES.forEach(function(id){
       if (id === src) return;
-      $(id).value = vals[id] == null ? "" : fmt(vals[id], id === "osyp" ? 0 : 2);
+      $(id).value = vals[id] == null ? "" : fmt(vals[id], dec(id));
     });
-    $("egp").textContent = usd != null && e ? fmt(usd * e.rate) : "–";
   }
 
   var metaState = {};
@@ -618,7 +631,7 @@ body.is-offline .offline{display:block}
     while (i < out.length && n < before){ if (out[i] !== "," && out[i] !== " ") n++; i++; }
     try { el.setSelectionRange(i, i); } catch(e){}
   }
-  ["usd", "nsyp", "osyp"].forEach(function(id){
+  BOXES.forEach(function(id){
     var el = $(id);
     el.addEventListener("input", function(){ liveCommas(el); src = id; srcVal = num(el.value); render(); showSum(); });
     el.addEventListener("focus", function(){
@@ -631,7 +644,7 @@ body.is-offline .offline{display:block}
       setTimeout(function(){ if (document.activeElement === el && el.value === v0) try { el.setSelectionRange(0, el.value.length); } catch(e){} }, 60);
     });
     el.addEventListener("keydown", function(e){ if (e.key === "Enter" || e.key === "="){ e.preventDefault(); finish(); } });
-    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, id === "osyp" ? 0 : 2); showSum(); setTimeout(hideKeysIfIdle, 0); });
+    el.addEventListener("blur", function(){ if (id === src && srcVal != null) el.value = fmt(srcVal, dec(id)); showSum(); setTimeout(hideKeysIfIdle, 0); });
   });
   // Calculator keys appear only under the box being edited.
   function showKeys(el){
@@ -641,7 +654,7 @@ body.is-offline .offline{display:block}
   }
   function hideKeysIfIdle(){
     var a = document.activeElement && document.activeElement.id;
-    if (a !== "usd" && a !== "nsyp" && a !== "osyp"){ $("keys").hidden = true; $("sumHint").hidden = true; }
+    if (BOXES.indexOf(a) < 0){ $("keys").hidden = true; $("sumHint").hidden = true; }
   }
   // "Scroll into view": on phones, bring the tapped box (and the calculator keys under it)
   // into the middle of the screen once the keyboard has opened.
@@ -666,11 +679,11 @@ body.is-offline .offline{display:block}
   var lastBox = "usd";
   function showSum(){
     var el = $(src), h = $("sumHint");
-    h.textContent = isExpr(el.value) && srcVal != null ? "= " + fmt(srcVal, src === "osyp" ? 0 : 2) : "";
+    h.textContent = isExpr(el.value) && srcVal != null ? "= " + fmt(srcVal, dec(src)) : "";
   }
   function finish(){
     var el = $(lastBox);
-    if (lastBox === src && srcVal != null) el.value = fmt(srcVal, src === "osyp" ? 0 : 2);
+    if (lastBox === src && srcVal != null) el.value = fmt(srcVal, dec(src));
     showSum();
   }
   function press(k){
@@ -752,24 +765,24 @@ body.is-offline .offline{display:block}
   document.querySelectorAll("#chips button").forEach(function(b){
     b.addEventListener("click", function(){
       var id = b.dataset.box, el = $(id);
-      el.value = fmt(+b.dataset.v, id === "osyp" ? 0 : 2); src = id; srcVal = +b.dataset.v; lastBox = id;
+      el.value = fmt(+b.dataset.v, dec(id)); src = id; srcVal = +b.dataset.v; lastBox = id;
       render(); showSum(); buzz(10);
     });
   });
   // Totals pinned to the top of the screen while typing on a phone, so the keyboard never hides them.
   function pinbar(){
     var bar = $("pinbar"), a = document.activeElement && document.activeElement.id;
-    var on = (a === "usd" || a === "nsyp" || a === "osyp") && window.matchMedia("(max-width: 899px)").matches;
+    var on = BOXES.indexOf(a) >= 0 && window.matchMedia("(max-width: 899px)").matches;
     if (!on){ bar.hidden = true; return; }
-    var r = rate(), usd = srcVal != null && r ? (src === "usd" ? srcVal : src === "nsyp" ? srcVal / r : srcVal / 100 / r) : null;
+    var v = boxVals();
     var cell = function(v, d, lbl){ return "<span>" + (v == null ? "–" : fmt(v, d)) + " <small>" + lbl + "</small></span>"; };
-    bar.innerHTML = cell(usd, 2, "$") + cell(usd != null ? usd * r : null, 2, t("nsyp")) + cell(usd != null ? usd * r * 100 : null, 0, t("osyp"));
+    bar.innerHTML = cell(v.usd, 2, "$") + cell(v.nsyp, 2, t("nsyp")) + cell(v.osyp, 0, t("osyp")) + cell(v.egp, 2, t("egp"));
     bar.hidden = false; placePin();
   }
   // Keep the bar at the top of what's visible even when the keyboard shifts the page.
   function placePin(){ var vv = window.visualViewport; $("pinbar").style.transform = vv ? "translateY(" + Math.max(0, vv.offsetTop) + "px)" : ""; }
   if (window.visualViewport){ window.visualViewport.addEventListener("scroll", placePin); window.visualViewport.addEventListener("resize", placePin); }
-  ["usd", "nsyp", "osyp"].forEach(function(id){
+  BOXES.forEach(function(id){
     $(id).addEventListener("focus", pinbar);
     $(id).addEventListener("input", pinbar);
     $(id).addEventListener("blur", function(){ setTimeout(pinbar, 0); });
