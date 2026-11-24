@@ -189,7 +189,7 @@ body.is-offline .offline{display:block}
 
   <section class="card">
     <h2><span data-i18n="ratesFor">Rates for $1</span> <em class="calls" id="calls"></em></h2>
-    <div class="row"><span class="label" data-i18n="streetLbl">Street (buy – sell)</span><span class="val" id="streetRate">…</span></div>
+    <div class="row"><span class="label" data-i18n="streetLbl">Street (buy)</span><span class="val" id="streetRate">…</span></div>
     <div class="meta" id="streetMeta" data-i18n="loading">Loading…</div>
     <div class="row"><span class="label" data-i18n="central">Central bank</span><span class="val" id="offRate">…</span></div>
     <div class="meta" id="offMeta" data-i18n="loading">Loading…</div>
@@ -238,13 +238,13 @@ body.is-offline .offline{display:block}
       usingStreet: "Using $1 = {r} new SYP (shop buy rate)", usingCentral: "Using $1 = {r} new SYP (central bank)", rateNA: "Rate unavailable",
       usd: "USD", nsyp: "New SYP", osyp: "Old SYP", egp: "EGP",
       usdAria: "US dollars", nsypAria: "New Syrian pounds", osypAria: "Old Syrian pounds", egpAria: "Egyptian pounds", keysAria: "Calculator keys",
-      ratesFor: "Rates for $1", streetLbl: "Street (buy – sell)", egpLbl: "Egyptian pound", loading: "Loading…", na: "unavailable",
+      ratesFor: "Rates for $1", streetLbl: "Street (buy)", egpLbl: "Egyptian pound", loading: "Loading…", na: "unavailable",
       calls: "{left} of {n} left today",
       metaLine: "{label} · {src} last changed it {when}", checkedAt: " · you checked at {t}",
       justNow: "just now", minAgo: "{n} min ago", hAgo: "{n} h ago", dAgo: "{n} days ago",
       liveDaily: "Live, source updates daily", backup: "Backup", offlineSaved: "Offline, last saved", noLoad: "Could not load rate",
-      liveDam: "Live, Damascus (buy – sell)", cantReach: "Couldn't reach sp-today ({e}), showing last saved", cantReach2: "Couldn't reach sp-today: {e}",
-      savedRefresh: "Saved, Damascus (buy – sell) · tap Refresh for newest", noneLeft: "Saved · no street updates left today",
+      liveDam: "Live, Damascus (buy)", cantReach: "Couldn't reach sp-today ({e}), showing last saved", cantReach2: "Couldn't reach sp-today: {e}",
+      savedRefresh: "Saved, Damascus (buy) · tap Refresh for newest", noneLeft: "Saved · no street updates left today",
       addKey: "Add your sp-today key (API key box) to get live rates",
       chartTitle: "Street rate by month", monthAria: "Choose month", chartAria: "Street rate chart",
       chartEmpty: "No rates saved for this month yet. Each day you open the app adds a point to this graph.",
@@ -263,13 +263,13 @@ body.is-offline .offline{display:block}
       usingStreet: "السعر المستخدم: 1 دولار = {r} ليرة جديدة (سعر الشراء في السوق)", usingCentral: "السعر المستخدم: 1 دولار = {r} ليرة جديدة (المصرف المركزي)", rateNA: "السعر غير متوفر",
       usd: "دولار", nsyp: "ليرة جديدة", osyp: "ليرة قديمة", egp: "جنيه مصري",
       usdAria: "دولار أمريكي", nsypAria: "ليرة سورية جديدة", osypAria: "ليرة سورية قديمة", egpAria: "جنيه مصري", keysAria: "أزرار الحاسبة",
-      ratesFor: "الأسعار مقابل 1 دولار", streetLbl: "السوق (شراء – مبيع)", egpLbl: "الجنيه المصري", loading: "جارٍ التحميل…", na: "غير متوفر",
+      ratesFor: "الأسعار مقابل 1 دولار", streetLbl: "السوق (شراء)", egpLbl: "الجنيه المصري", loading: "جارٍ التحميل…", na: "غير متوفر",
       calls: "متبقٍ اليوم: {left} من {n}",
       metaLine: "{label} · آخر تغيير من {src}: {when}", checkedAt: " · فحصتَ الساعة {t}",
       justNow: "الآن", minAgo: "قبل {n} دقيقة", hAgo: "قبل {n} ساعة", dAgo: "قبل {n} يوم",
       liveDaily: "مباشر، المصدر يُحدَّث يومياً", backup: "نسخة احتياطية", offlineSaved: "دون اتصال، آخر قيمة محفوظة", noLoad: "تعذّر تحميل السعر",
-      liveDam: "مباشر، دمشق (شراء – مبيع)", cantReach: "تعذّر الوصول إلى ⁦sp-today⁩ ({e})، تُعرض آخر قيمة محفوظة", cantReach2: "تعذّر الوصول إلى ⁦sp-today⁩: {e}",
-      savedRefresh: "محفوظ، دمشق (شراء – مبيع) · اضغط «تحديث» لأحدث سعر", noneLeft: "محفوظ · لا تحديثات متبقية اليوم",
+      liveDam: "مباشر، دمشق (شراء)", cantReach: "تعذّر الوصول إلى ⁦sp-today⁩ ({e})، تُعرض آخر قيمة محفوظة", cantReach2: "تعذّر الوصول إلى ⁦sp-today⁩: {e}",
+      savedRefresh: "محفوظ، دمشق (شراء) · اضغط «تحديث» لأحدث سعر", noneLeft: "محفوظ · لا تحديثات متبقية اليوم",
       addKey: "أضف مفتاح ⁦sp-today⁩ (في خانة المفتاح) للحصول على الأسعار المباشرة",
       chartTitle: "سعر السوق حسب الشهر", monthAria: "اختر الشهر", chartAria: "رسم سعر السوق",
       chartEmpty: "لا توجد أسعار محفوظة لهذا الشهر بعد. كل يوم تفتح فيه التطبيق يضيف نقطة إلى الرسم.",
@@ -384,7 +384,7 @@ body.is-offline .offline{display:block}
     $("mStreet").className = mode === "street" ? "on" : "";
     $("mOff").className = mode === "street" ? "" : "on";
     $("using").textContent = r ? t(mode === "street" ? "usingStreet" : "usingCentral", { r: iso(fmt(r)) }) : t("rateNA");
-    $("streetRate").textContent = s ? fmt(s.buy) + (s.sell && s.sell !== s.buy ? " – " + fmt(s.sell) : "") : t("na");
+    $("streetRate").textContent = s ? fmt(s.buy) : t("na");
     $("offRate").textContent = o ? fmt(o.mid) : t("na");
     $("egpRate").textContent = e ? fmt(e.rate) : t("na");
 
